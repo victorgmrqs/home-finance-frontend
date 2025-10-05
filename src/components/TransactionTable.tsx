@@ -3,6 +3,7 @@ import type { Transaction } from "./TransactionsPage";
 
 interface TransactionTableProps {
   transactions: Transaction[];
+  lastTransactionRef?: (node: HTMLTableRowElement | null) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -13,7 +14,15 @@ const formatCurrency = (value: number) => {
 };
 
 const formatDate = (dateString: string) => {
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(dateString));
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Data inválida';
+    }
+    return new Intl.DateTimeFormat('pt-BR').format(date);
+  } catch (error) {
+    return 'Data inválida';
+  }
 };
 
 const getRecurrenceLabel = (recurrence: string) => {
@@ -30,7 +39,7 @@ const getTypeLabel = (type: string) => {
   return type === 'entrada' ? 'Entrada' : 'Saída';
 };
 
-export const TransactionTable = ({ transactions }: TransactionTableProps) => {
+export const TransactionTable = ({ transactions, lastTransactionRef }: TransactionTableProps) => {
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12">
@@ -54,13 +63,16 @@ export const TransactionTable = ({ transactions }: TransactionTableProps) => {
           </tr>
         </thead>
         <tbody>
-          {transactions.map((transaction, index) => (
-            <tr 
-              key={transaction.id}
-              className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                index === transactions.length - 1 ? 'border-b-0' : ''
-              }`}
-            >
+          {transactions.map((transaction, index) => {
+            const isLastTransaction = index === transactions.length - 1;
+            return (
+              <tr 
+                key={transaction.id}
+                ref={isLastTransaction ? lastTransactionRef : undefined}
+                className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                  isLastTransaction ? 'border-b-0' : ''
+                }`}
+              >
               <td className="py-4 px-6 text-sm text-foreground">
                 {formatDate(transaction.date)}
               </td>
@@ -95,7 +107,8 @@ export const TransactionTable = ({ transactions }: TransactionTableProps) => {
                 </Badge>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

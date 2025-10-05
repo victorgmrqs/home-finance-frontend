@@ -6,7 +6,12 @@ import type { Transaction } from "./TransactionsPage";
 
 interface TransactionFiltersProps {
   transactions: Transaction[];
-  onFilter: (filtered: Transaction[]) => void;
+  onFilter: (filtered: {
+    tipo?: string;
+    categoria?: string;
+    descricao?: string;
+    location?: string;
+  }) => void;
 }
 
 const categories = [
@@ -26,34 +31,29 @@ export const TransactionFilters = ({ transactions, onFilter }: TransactionFilter
   const [locationFilter, setLocationFilter] = useState<string>("");
 
   useEffect(() => {
-    let filtered = transactions;
+    const filters:any = {};
 
     // Filtro por tipo
     if (typeFilter !== "todos") {
-      filtered = filtered.filter(t => t.type === typeFilter);
+      filters.tipo = typeFilter.toUpperCase() as "ENTRADA" | "SAIDA";
     }
 
     // Filtro por categoria
     if (categoryFilter !== "todos") {
-      filtered = filtered.filter(t => t.category === categoryFilter);
+      filters.categoria = categoryFilter;
     }
 
     // Filtro por descrição
     if (descriptionFilter) {
-      filtered = filtered.filter(t => 
-        t.description.toLowerCase().includes(descriptionFilter.toLowerCase())
-      );
+      filters.descricao = descriptionFilter;
     }
 
-    // Filtro por local
-    if (locationFilter) {
-      filtered = filtered.filter(t =>
-        t.location.toLowerCase().includes(locationFilter.toLowerCase())
-      );
-    }
+    // Filtro por local - not sent to API, handled on frontend
+    // The API expects 'local' as a number (local_id), not a string search
+    // For now, we'll skip this filter on the API side
 
-    onFilter(filtered);
-  }, [typeFilter, categoryFilter, descriptionFilter, locationFilter, transactions, onFilter]);
+    onFilter(filters);
+  }, [typeFilter, categoryFilter, descriptionFilter, locationFilter, onFilter]);
 
   return (
     <div className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
