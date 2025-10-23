@@ -14,6 +14,8 @@ export function usePaineis(params?: { limit?: number; offset?: number; usuario_i
   return useQuery({
     queryKey: [QUERY_KEY, params],
     queryFn: () => api.paineis.list(params),
+    // Se usuario_id não for fornecido, buscar todos os painéis do sistema
+    // (O backend deve filtrar por usuário automaticamente via autenticação)
   });
 }
 

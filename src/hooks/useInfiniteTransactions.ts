@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTransactions } from './useTransactions';
 
 interface UseInfiniteTransactionsOptions {
@@ -22,60 +22,67 @@ export function useInfiniteTransactions({
   itemsPerPage = 20,
   filters = {}
 }: UseInfiniteTransactionsOptions = {}): UseInfiniteTransactionsReturn {
-  const [allTransactions, setAllTransactions] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const isFirstRender = useRef(true);
 
-  // Use the existing useTransactions hook
+  // Track accumulated pages with filters key to reset when filters change
+  const filtersKey = JSON.stringify(filters);
+  const prevFiltersKey = useRef(filtersKey);
+  const [accumulatedPages, setAccumulatedPages] = useState<Map<number, any[]>>(new Map());
+
+  // Enable if we have painel_id OR showAllPaineis flag
+  const hasValidFilters = !!filters?.painel_id;
+
+  // Fetch current page
   const { data: transactions = [], isLoading, error } = useTransactions({
     limit: itemsPerPage,
     offset: (currentPage - 1) * itemsPerPage,
     ...filters,
   });
 
-  // Update all transactions when new data arrives
+  // Reset accumulated pages when filters change
   useEffect(() => {
-    if (transactions.length > 0) {
-      if (currentPage === 1) {
-        // Reset for new search/filter
-        setAllTransactions(transactions);
-      } else {
-        // Append for pagination - avoid duplicates
-        setAllTransactions(prev => {
-          const existingIds = new Set(prev.map((t: any) => t.id));
-          const newTransactions = transactions.filter((t: any) => !existingIds.has(t.id));
-          return [...prev, ...newTransactions];
-        });
-      }
-
-      // Check if we have more data - if we got fewer items than requested, we're at the end
-      setHasMore(transactions.length >= itemsPerPage);
-      setIsLoadingMore(false);
-    } else if (currentPage === 1) {
-      setAllTransactions([]);
-      setHasMore(false);
-      setIsLoadingMore(false);
-    } else {
-      // No more data to load
-      setHasMore(false);
+    if (prevFiltersKey.current !== filtersKey) {
+      prevFiltersKey.current = filtersKey;
+      setCurrentPage(1);
+      setAccumulatedPages(new Map());
       setIsLoadingMore(false);
     }
-  }, [transactions, currentPage, itemsPerPage]);
-
-  // Reset when filters change (but not on first render)
-  const filtersKey = JSON.stringify(filters);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    setCurrentPage(1);
-    setAllTransactions([]);
-    setHasMore(true);
   }, [filtersKey]);
+
+  // Update accumulated pages when new data arrives
+  useEffect(() => {
+    if (!isLoading && hasValidFilters && transactions.length > 0) {
+      setAccumulatedPages(prev => {
+        const next = new Map(prev);
+        next.set(currentPage, transactions);
+        return next;
+      });
+      setIsLoadingMore(false);
+    } else if (!isLoading && hasValidFilters && transactions.length === 0 && currentPage > 1) {
+      // No more data
+      setIsLoadingMore(false);
+    }
+  }, [transactions, currentPage, isLoading, hasValidFilters]);
+
+  // Compute all transactions from accumulated pages (memoized)
+  const allTransactions = useMemo(() => {
+    const pages = Array.from(accumulatedPages.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([_, txs]) => txs);
+    return pages.flat();
+  }, [accumulatedPages]);
+
+  // Compute hasMore based on last page data
+  const hasMore = useMemo(() => {
+    if (!hasValidFilters) return false;
+    if (isLoading) return true; // Still loading first page
+
+    const lastPage = accumulatedPages.get(currentPage);
+    if (!lastPage) return true; // Haven't loaded this page yet
+
+    return lastPage.length >= itemsPerPage;
+  }, [accumulatedPages, currentPage, itemsPerPage, hasValidFilters, isLoading]);
 
   const loadMore = useCallback(() => {
     if (isLoadingMore || !hasMore || isLoading) return;
@@ -86,14 +93,13 @@ export function useInfiniteTransactions({
 
   const reset = useCallback(() => {
     setCurrentPage(1);
-    setAllTransactions([]);
-    setHasMore(true);
+    setAccumulatedPages(new Map());
     setIsLoadingMore(false);
   }, []);
 
   return {
     transactions: allTransactions,
-    isLoading,
+    isLoading: (isLoading && currentPage === 1) || !hasValidFilters,
     isLoadingMore,
     hasMore,
     error,
