@@ -1,9 +1,12 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowRightLeft } from "lucide-react";
 import type { Transaction } from "./TransactionsPage";
 
 interface TransactionTableProps {
   transactions: Transaction[];
   lastTransactionRef?: (node: HTMLTableRowElement | null) => void;
+  onMoveTransaction?: (transaction: Transaction) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -39,7 +42,33 @@ const getTypeLabel = (type: string) => {
   return type === 'entrada' ? 'Entrada' : 'Saída';
 };
 
-export const TransactionTable = ({ transactions, lastTransactionRef }: TransactionTableProps) => {
+const getTipoDivisaoDisplay = (transaction: Transaction) => {
+  if (!transaction.tipo_divisao || transaction.tipo_divisao === 'PESSOAL') {
+    return '💰 Pessoal';
+  }
+  if (transaction.tipo_divisao === 'COMPARTILHADO_50_50') {
+    return '👥 50/50';
+  }
+  if (transaction.tipo_divisao === 'COMPARTILHADO_CUSTOM') {
+    return `⚖️ ${transaction.porcentagem_divisao || 50}%`;
+  }
+  return '💰 Pessoal';
+};
+
+const getStatusPagamentoDisplay = (status?: string) => {
+  if (!status || status === 'PENDENTE') return '⏳ Pendente';
+  if (status === 'PAGO') return '✅ Pago';
+  if (status === 'VENCIDO') return '❌ Vencido';
+  return '⏳ Pendente';
+};
+
+const getStatusPagamentoBadgeVariant = (status?: string): "default" | "secondary" | "destructive" => {
+  if (status === 'PAGO') return 'default';
+  if (status === 'VENCIDO') return 'destructive';
+  return 'secondary';
+};
+
+export const TransactionTable = ({ transactions, lastTransactionRef, onMoveTransaction }: TransactionTableProps) => {
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12">
@@ -55,11 +84,16 @@ export const TransactionTable = ({ transactions, lastTransactionRef }: Transacti
           <tr className="bg-table-header">
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Data</th>
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Descrição</th>
-            <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Valor</th>
+            <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Valor Total</th>
+            <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Você Paga</th>
+            <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Divisão</th>
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Tipo</th>
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Categoria</th>
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Local</th>
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Recorrência</th>
+            <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Vencimento</th>
+            <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Status</th>
+            {onMoveTransaction && <th className="text-left py-4 px-6 text-sm font-semibold text-foreground w-24">Ações</th>}
           </tr>
         </thead>
         <tbody>
@@ -79,10 +113,20 @@ export const TransactionTable = ({ transactions, lastTransactionRef }: Transacti
               <td className="py-4 px-6 text-sm text-foreground">
                 {transaction.description}
               </td>
-              <td className="py-4 px-6 text-sm font-semibold">
+              <td className="py-4 px-6 text-sm">
                 <span className={transaction.type === 'entrada' ? 'text-success' : 'text-danger'}>
                   {transaction.type === 'entrada' ? '+' : '-'} {formatCurrency(transaction.value)}
                 </span>
+              </td>
+              <td className="py-4 px-6 text-sm font-semibold">
+                <span className={transaction.type === 'entrada' ? 'text-success' : 'text-primary'}>
+                  {formatCurrency(transaction.valor_por_pessoa || transaction.value)}
+                </span>
+              </td>
+              <td className="py-4 px-6">
+                <Badge variant="outline" className="text-xs">
+                  {getTipoDivisaoDisplay(transaction)}
+                </Badge>
               </td>
               <td className="py-4 px-6">
                 <Badge 
@@ -106,6 +150,27 @@ export const TransactionTable = ({ transactions, lastTransactionRef }: Transacti
                   {getRecurrenceLabel(transaction.recurrence)}
                 </Badge>
               </td>
+              <td className="py-4 px-6 text-sm text-foreground">
+                {transaction.data_vencimento ? formatDate(transaction.data_vencimento) : '-'}
+              </td>
+              <td className="py-4 px-6">
+                <Badge variant={getStatusPagamentoBadgeVariant(transaction.status_pagamento)}>
+                  {getStatusPagamentoDisplay(transaction.status_pagamento)}
+                </Badge>
+              </td>
+              {onMoveTransaction && (
+                <td className="py-4 px-6">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onMoveTransaction(transaction)}
+                    className="hover:bg-primary/10 hover:text-primary"
+                    title="Mover para outro cartão"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                  </Button>
+                </td>
+              )}
             </tr>
             );
           })}

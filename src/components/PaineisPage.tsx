@@ -21,7 +21,7 @@ export const PaineisPage = () => {
   const confirmDelete = () => { if (deletingPainel) { deletePainel.mutate(deletingPainel.id); setDeletingPainel(null); } };
   const handleCloseModal = () => { setIsModalOpen(false); setEditingPainel(null); };
 
-  if (error) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-center"><h2 className="text-2xl font-bold text-destructive mb-2">Erro ao carregar painéis</h2><p className="text-muted-foreground">{error instanceof Error ? error.message : 'Erro desconhecido'}</p><Button onClick={() => window.location.reload()} className="mt-4">Tentar novamente</Button></div></div>;
+  if (error) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-center"><h2 className="text-2xl font-bold text-destructive mb-2">Erro ao carregar cartões</h2><p className="text-muted-foreground">{error instanceof Error ? error.message : 'Erro desconhecido'}</p><Button onClick={() => window.location.reload()} className="mt-4">Tentar novamente</Button></div></div>;
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,15 +29,15 @@ export const PaineisPage = () => {
       <main className="container mx-auto px-4 py-8">
         <Navigation />
         <div className="flex items-center justify-between mb-8 mt-8">
-          <div><h2 className="text-3xl font-bold text-foreground">Painéis</h2><p className="text-muted-foreground mt-1">{paineis.length} {paineis.length === 1 ? 'painel cadastrado' : 'painéis cadastrados'}</p></div>
-          <Button onClick={() => setIsModalOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90"><Plus className="w-4 h-4 mr-2" />Novo Painel</Button>
+          <div><h2 className="text-3xl font-bold text-foreground">Cartões</h2><p className="text-muted-foreground mt-1">{paineis.length} {paineis.length === 1 ? 'cartão cadastrado' : 'cartões cadastrados'}</p></div>
+          <Button onClick={() => setIsModalOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90"><Plus className="w-4 h-4 mr-2" />Novo Cartão</Button>
         </div>
         <div className="bg-card rounded-lg shadow-sm border border-border mb-6">
           {isLoading ? <div className="p-6 space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div> : <PaineisTable paineis={paineis} onEdit={handleEdit} onDelete={handleDelete} />}
         </div>
       </main>
       <PainelModal isOpen={isModalOpen} onClose={handleCloseModal} painel={editingPainel} />
-      <AlertDialog open={!!deletingPainel} onOpenChange={() => setDeletingPainel(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle><AlertDialogDescription>Tem certeza que deseja excluir o painel "{deletingPainel?.nome}"? Esta ação removerá todas as transações associadas.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={!!deletingPainel} onOpenChange={() => setDeletingPainel(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle><AlertDialogDescription>Tem certeza que deseja excluir o cartão "{deletingPainel?.nome}"? Esta ação removerá todas as transações associadas.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 };

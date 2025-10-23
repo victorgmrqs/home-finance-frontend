@@ -5,10 +5,11 @@ export const Navigation = () => {
   const location = useLocation();
 
   const links = [
+    { path: "/dashboard", label: "Dashboard" },
     { path: "/", label: "Transações" },
     { path: "/locais", label: "Locais" },
     { path: "/usuarios", label: "Usuários" },
-    { path: "/paineis", label: "Painéis" },
+    { path: "/paineis", label: "Cartões" },
   ];
 
   return (
