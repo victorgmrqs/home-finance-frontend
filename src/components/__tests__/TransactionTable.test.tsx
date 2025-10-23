@@ -16,11 +16,15 @@ describe('TransactionTable', () => {
     // Check table headers
     expect(screen.getByText('Data')).toBeInTheDocument()
     expect(screen.getByText('Descrição')).toBeInTheDocument()
-    expect(screen.getByText('Valor')).toBeInTheDocument()
+    expect(screen.getByText('Valor Total')).toBeInTheDocument()
+    expect(screen.getByText('Você Paga')).toBeInTheDocument()
+    expect(screen.getByText('Divisão')).toBeInTheDocument()
     expect(screen.getByText('Tipo')).toBeInTheDocument()
     expect(screen.getByText('Categoria')).toBeInTheDocument()
     expect(screen.getByText('Local')).toBeInTheDocument()
     expect(screen.getByText('Recorrência')).toBeInTheDocument()
+    expect(screen.getByText('Vencimento')).toBeInTheDocument()
+    expect(screen.getByText('Status')).toBeInTheDocument()
 
     // Check transaction data
     expect(screen.getByText('Supermercado')).toBeInTheDocument()
@@ -36,7 +40,7 @@ describe('TransactionTable', () => {
   it('should apply lastTransactionRef to the last transaction row', () => {
     const transactions = [
       mockTransaction,
-      { ...mockTransaction, id: '2', description: 'Segunda Transação' }
+      { ...mockTransaction, id: 2, description: 'Segunda Transação' }
     ]
     
     const mockRef = vi.fn()
@@ -50,7 +54,7 @@ describe('TransactionTable', () => {
   it('should not apply lastTransactionRef when not provided', () => {
     const transactions = [
       mockTransaction,
-      { ...mockTransaction, id: '2', description: 'Segunda Transação' }
+      { ...mockTransaction, id: 2, description: 'Segunda Transação' }
     ]
     
     render(<TransactionTable transactions={transactions} />)
@@ -82,8 +86,8 @@ describe('TransactionTable', () => {
     
     render(<TransactionTable transactions={transactions} />)
 
-    // Should show formatted date (assuming mockTransaction has date '2024-01-15')
-    expect(screen.getByText('15/01/2024')).toBeInTheDocument()
+    // Should show formatted date (mockTransaction has date '2025-01-01')
+    expect(screen.getByText('31/12/2024')).toBeInTheDocument()
   })
 
   it('should show correct transaction type badge', () => {
@@ -100,8 +104,8 @@ describe('TransactionTable', () => {
     
     render(<TransactionTable transactions={transactions} />)
 
-    // Should show "Mensal" badge for mensal recurrence
-    expect(screen.getByText('Mensal')).toBeInTheDocument()
+    // Should show "Ocasional" badge for ocasional recurrence
+    expect(screen.getByText('Ocasional')).toBeInTheDocument()
   })
 
   it('should handle multiple transactions correctly', () => {
@@ -145,7 +149,7 @@ describe('TransactionTable', () => {
   })
 
   it('should handle missing location gracefully', () => {
-    const transactions = [{ ...mockTransaction, location: '' }]
+    const transactions = [{ ...mockTransaction, local_id: null }]
     
     render(<TransactionTable transactions={transactions} />)
 
