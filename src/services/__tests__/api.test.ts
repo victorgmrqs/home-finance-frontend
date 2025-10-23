@@ -64,7 +64,7 @@ describe('API Service', () => {
         await api.transactions.list(filters)
 
         expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:8000/api/v1/transactions?limit=10&tipo=SAIDA&categoria=Alimenta%C3%A7%C3%A3o',
+          'http://localhost:8000/api/v1/transactions?limit=10&offset=0&tipo=SAIDA&categoria=Alimenta%C3%A7%C3%A3o',
           expect.any(Object)
         )
       })
