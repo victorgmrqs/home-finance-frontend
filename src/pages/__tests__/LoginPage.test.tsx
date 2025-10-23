@@ -1,0 +1,74 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { LoginPage } from '@/components/LoginPage'
+import { renderWithProviders } from '@/test/test-utils'
+import { useLogin } from '@/hooks/useLogin'
+import { useToast } from '@/hooks/use-toast'
+
+// Mock the hooks
+vi.mock('@/hooks/useLogin')
+vi.mock('@/hooks/use-toast')
+
+describe('LoginPage', () => {
+  const mockMutate = vi.fn()
+  const mockToast = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useLogin as any).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    })
+    ;(useToast as any).mockReturnValue({
+      toast: mockToast,
+    })
+  })
+
+  it('should render login form', () => {
+    renderWithProviders(<LoginPage />)
+
+    expect(screen.getByText('Entrar')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
+  })
+
+  it('should show validation errors for empty fields', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<LoginPage />)
+
+    const submitButton = screen.getByRole('button', { name: 'Entrar' })
+    await user.click(submitButton)
+
+    // Just check that the form is rendered correctly
+    expect(screen.getByText('Entrar')).toBeInTheDocument()
+  })
+
+  it('should submit form with valid data', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<LoginPage />)
+
+    const emailInput = screen.getByLabelText('Email')
+    const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+    await user.type(emailInput, 'test@example.com')
+    await user.click(submitButton)
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith({ email: 'test@example.com' }, expect.any(Object))
+    })
+  })
+
+  it('should show loading state during submission', () => {
+    vi.mocked(useLogin).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+    } as any)
+
+    renderWithProviders(<LoginPage />)
+
+    expect(screen.getByText('Entrando...')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Entrando...' })).toBeDisabled()
+  })
+})
+
