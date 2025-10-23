@@ -9,6 +9,31 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.d.ts',
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.spec.{ts,tsx}',
+        'src/test/**/*',
+        'src/**/__tests__/**/*',
+        'src/**/__mocks__/**/*',
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        'src/components/ui/**/*', // Excluir componentes de UI genéricos
+      ],
+      thresholds: {
+        global: {
+          branches: 70,
+          functions: 70,
+          lines: 70,
+          statements: 70,
+        },
+      },
+    },
   },
   resolve: {
     alias: {
