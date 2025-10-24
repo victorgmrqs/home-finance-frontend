@@ -13,6 +13,7 @@ import { usePaineis } from "@/hooks/usePaineis";
 import { useCategorias, useCreateCategoria } from "@/hooks/useCategorias";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
+import { getCurrentDate } from "@/utils/date";
 import type { Transaction } from "./TransactionsPage";
 
 interface TransactionModalProps {
@@ -35,7 +36,7 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
     : [];
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getCurrentDate(),
     description: "",
     value: "",
     type: "" as "entrada" | "saida" | "",
@@ -46,11 +47,15 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
     tipo_divisao: "PESSOAL" as "PESSOAL" | "COMPARTILHADO_50_50" | "COMPARTILHADO_CUSTOM" | "",
     porcentagem_divisao: "",
     data_vencimento: "",
-    status_pagamento: "PENDENTE" as "PENDENTE" | "PAGO" | "VENCIDO" | ""
+    status_pagamento: "PENDENTE" as "PENDENTE" | "PAGO" | "VENCIDO" | "",
+    parcelas: 1,
+    eh_parcelado: false,
   });
 
   const [locationOpen, setLocationOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
 
   // Calcular valor por pessoa automaticamente
   const calcularValorPorPessoa = (): number | null => {
@@ -79,7 +84,13 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.description || !formData.value || !formData.type || !formData.category || !formData.recurrence) {
+    // Validar apenas campos obrigatórios: valor, tipo, categoria, recorrência
+    if (!formData.value || !formData.type || !formData.category || !formData.recurrence) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: 'Preencha valor, tipo, categoria e recorrência',
+        variant: 'destructive'
+      });
       return;
     }
 
@@ -94,23 +105,24 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
 
     onSubmit({
       date: formData.date,
-      description: formData.description,
+      description: formData.description || 'Sem descrição',
       value: parseFloat(formData.value),
       type: formData.type,
       category: formData.category,
-      location: formData.location || "Não informado",
+      location: formData.location || "",
       recurrence: formData.recurrence,
       painel_id: formData.painel_id,
       tipo_divisao: formData.tipo_divisao || 'PESSOAL',
       valor_por_pessoa: valorPorPessoa,
       porcentagem_divisao: formData.tipo_divisao === 'COMPARTILHADO_CUSTOM' ? parseFloat(formData.porcentagem_divisao) : undefined,
       data_vencimento: formData.data_vencimento || undefined,
-      status_pagamento: formData.status_pagamento || 'PENDENTE'
+      status_pagamento: formData.status_pagamento || 'PENDENTE',
+      parcelas: formData.eh_parcelado ? formData.parcelas : undefined,
     });
 
     // Reset form
     setFormData({
-      date: new Date().toISOString().split('T')[0],
+      date: getCurrentDate(),
       description: "",
       value: "",
       type: "",
@@ -121,8 +133,12 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
       tipo_divisao: "PESSOAL",
       porcentagem_divisao: "",
       data_vencimento: "",
-      status_pagamento: "PENDENTE"
+      status_pagamento: "PENDENTE",
+      parcelas: 1,
+      eh_parcelado: false,
     });
+
+    onClose();
   };
 
   const filteredLocations = existingLocations.filter(location =>
@@ -153,13 +169,12 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
 
           {/* Descrição */}
           <div>
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="description">Descrição (opcional)</Label>
             <Input
               id="description"
               placeholder="Ex: Supermercado"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              required
             />
           </div>
 
@@ -201,7 +216,7 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
           {/* Categoria */}
           <div>
             <Label>Categoria</Label>
-            <Popover>
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -213,21 +228,35 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
               </PopoverTrigger>
               <PopoverContent className="w-full p-0">
                 <Command>
-                  <CommandInput placeholder="Buscar ou criar categoria..." />
+                  <CommandInput
+                    placeholder="Buscar ou criar categoria..."
+                    value={categorySearch}
+                    onValueChange={setCategorySearch}
+                  />
                   <CommandEmpty>
                     <div
                       className="flex items-center px-2 py-2 text-sm cursor-pointer hover:bg-accent"
                       onClick={() => {
-                        const input = document.querySelector('[placeholder="Buscar ou criar categoria..."]') as HTMLInputElement;
-                        const newCategory = input?.value;
-                        if (newCategory) {
-                          createCategoria.mutate({ nome: newCategory });
-                          setFormData({ ...formData, category: newCategory });
+                        if (!categorySearch.trim()) {
+                          toast({
+                            title: 'Erro',
+                            description: 'Digite o nome da categoria',
+                            variant: 'destructive',
+                          });
+                          return;
                         }
+
+                        createCategoria.mutate({ nome: categorySearch }, {
+                          onSuccess: (newCategoria) => {
+                            setFormData({ ...formData, category: newCategoria.nome });
+                            setCategoryOpen(false);
+                            setCategorySearch('');
+                          },
+                        });
                       }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Criar categoria
+                      Criar categoria "{categorySearch}"
                     </div>
                   </CommandEmpty>
                   <CommandGroup>
@@ -235,8 +264,10 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
                       <CommandItem
                         key={categoria.id}
                         value={categoria.nome}
-                        onSelect={() => {
-                          setFormData({ ...formData, category: categoria.nome });
+                        onSelect={(value) => {
+                          setFormData({ ...formData, category: value });
+                          setCategoryOpen(false);
+                          setCategorySearch('');
                         }}
                       >
                         {categoria.nome}
@@ -250,7 +281,7 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
 
           {/* Local */}
           <div>
-            <Label>Local</Label>
+            <Label>Local (opcional)</Label>
             <Popover open={locationOpen} onOpenChange={setLocationOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -354,6 +385,48 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
               </SelectContent>
             </Select>
           </div>
+
+          {/* Parcelamento - apenas para saídas */}
+          {formData.type === 'saida' && (
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="eh_parcelado"
+                  checked={formData.eh_parcelado}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    eh_parcelado: e.target.checked,
+                    parcelas: e.target.checked ? formData.parcelas : 1
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="eh_parcelado" className="font-normal cursor-pointer">
+                  Compra parcelada
+                </Label>
+              </div>
+
+              {formData.eh_parcelado && (
+                <div>
+                  <Label htmlFor="parcelas">Número de parcelas</Label>
+                  <Input
+                    id="parcelas"
+                    type="number"
+                    min="2"
+                    max="48"
+                    value={formData.parcelas}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      parcelas: parseInt(e.target.value) || 1
+                    })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formData.parcelas}x de R$ {(parseFloat(formData.value) / formData.parcelas || 0).toFixed(2)}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Data de Vencimento */}
           <div>

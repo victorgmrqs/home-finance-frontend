@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Users, CreditCard } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -9,10 +8,25 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Navigation } from './Navigation';
+import { getCurrentMonth, isValidMonthFilter } from '@/utils/date';
+import { useToast } from '@/hooks/use-toast';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
-  const [mes, setMes] = useState(format(new Date(), 'yyyy-MM'));
+  const { toast } = useToast();
+  const [mes, setMes] = useState(getCurrentMonth());
+
+  const handleMonthChange = (newMes: string) => {
+    if (!isValidMonthFilter(newMes)) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Use o formato AAAA-MM (ex: 2025-10)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setMes(newMes);
+  };
 
   const { data: dashboardData, isLoading } = useDashboardData({ mes });
 
@@ -55,8 +69,9 @@ export const Dashboard = () => {
             <Input
               type="month"
               value={mes}
-              onChange={(e) => setMes(e.target.value)}
+              onChange={(e) => handleMonthChange(e.target.value)}
               className="w-[150px]"
+              data-testid="dashboard-month-filter"
             />
           </div>
 
@@ -68,7 +83,7 @@ export const Dashboard = () => {
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-green-600">
+                <p className="text-3xl font-bold text-green-600" data-testid="total-entradas">
                   R$ {dashboardData.total_entradas_familia.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -83,7 +98,7 @@ export const Dashboard = () => {
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-red-600">
+                <p className="text-3xl font-bold text-red-600" data-testid="total-saidas">
                   R$ {dashboardData.total_saidas_familia.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -98,7 +113,7 @@ export const Dashboard = () => {
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className={`text-3xl font-bold ${dashboardData.saldo_familia >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`text-3xl font-bold ${dashboardData.saldo_familia >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="saldo-familia">
                   R$ {dashboardData.saldo_familia.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
