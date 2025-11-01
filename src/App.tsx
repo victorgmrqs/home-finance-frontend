@@ -12,6 +12,7 @@ import { TransactionsPageInfiniteScroll } from "./components/TransactionsPageInf
 import { LocaisPage } from "./components/LocaisPage";
 import { UsuariosPage } from "./components/UsuariosPage";
 import { PaineisPage } from "./components/PaineisPage";
+import { CategoriasPage } from "./components/CategoriasPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/paineis" element={<ProtectedRoute><PaineisPage /></ProtectedRoute>} />
               <Route path="/" element={<ProtectedRoute><TransactionsPageInfiniteScroll /></ProtectedRoute>} />
               <Route path="/locais" element={<ProtectedRoute><LocaisPage /></ProtectedRoute>} />
+              <Route path="/categorias" element={<ProtectedRoute><CategoriasPage /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

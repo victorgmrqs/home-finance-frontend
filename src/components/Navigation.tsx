@@ -7,6 +7,7 @@ export const Navigation = () => {
   const links = [
     { path: "/dashboard", label: "Dashboard" },
     { path: "/", label: "Transações" },
+    { path: "/categorias", label: "Categorias" },
     { path: "/locais", label: "Locais" },
     { path: "/usuarios", label: "Usuários" },
     { path: "/paineis", label: "Cartões" },
