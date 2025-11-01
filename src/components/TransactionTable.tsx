@@ -1,12 +1,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, Pencil, Trash2 } from "lucide-react";
 import type { Transaction } from "./TransactionsPage";
 
 interface TransactionTableProps {
   transactions: Transaction[];
   lastTransactionRef?: (node: HTMLTableRowElement | null) => void;
   onMoveTransaction?: (transaction: Transaction) => void;
+  onEditTransaction?: (transaction: Transaction) => void;
+  onDeleteTransaction?: (transaction: Transaction) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -68,7 +70,14 @@ const getStatusPagamentoBadgeVariant = (status?: string): "default" | "secondary
   return 'secondary';
 };
 
-export const TransactionTable = ({ transactions, lastTransactionRef, onMoveTransaction }: TransactionTableProps) => {
+export const TransactionTable = ({
+  transactions,
+  lastTransactionRef,
+  onMoveTransaction,
+  onEditTransaction,
+  onDeleteTransaction
+}: TransactionTableProps) => {
+  const showActionsColumn = onMoveTransaction || onEditTransaction || onDeleteTransaction;
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12">
@@ -93,7 +102,7 @@ export const TransactionTable = ({ transactions, lastTransactionRef, onMoveTrans
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Recorrência</th>
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Vencimento</th>
             <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Status</th>
-            {onMoveTransaction && <th className="text-left py-4 px-6 text-sm font-semibold text-foreground w-24">Ações</th>}
+            {showActionsColumn && <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Ações</th>}
           </tr>
         </thead>
         <tbody>
@@ -158,17 +167,46 @@ export const TransactionTable = ({ transactions, lastTransactionRef, onMoveTrans
                   {getStatusPagamentoDisplay(transaction.status_pagamento)}
                 </Badge>
               </td>
-              {onMoveTransaction && (
+              {showActionsColumn && (
                 <td className="py-4 px-6">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onMoveTransaction(transaction)}
-                    className="hover:bg-primary/10 hover:text-primary"
-                    title="Mover para outro cartão"
-                  >
-                    <ArrowRightLeft className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {onEditTransaction && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditTransaction(transaction)}
+                        className="hover:bg-primary/10 hover:text-primary"
+                        title="Editar transação"
+                        aria-label="Editar transação"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onDeleteTransaction && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteTransaction(transaction)}
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                        title="Excluir transação"
+                        aria-label="Excluir transação"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onMoveTransaction && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onMoveTransaction(transaction)}
+                        className="hover:bg-primary/10 hover:text-primary"
+                        title="Mover para outro cartão"
+                        aria-label="Mover para outro cartão"
+                      >
+                        <ArrowRightLeft className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </td>
               )}
             </tr>

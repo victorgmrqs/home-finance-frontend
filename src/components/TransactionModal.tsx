@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,18 @@ interface TransactionModalProps {
   onClose: () => void;
   onSubmit: (transaction: Omit<Transaction, "id">) => void;
   existingLocations: string[];
+  mode?: "create" | "edit";
+  transactionToEdit?: Transaction;
 }
 
-export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations }: TransactionModalProps) => {
+export const TransactionModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  existingLocations,
+  mode = "create",
+  transactionToEdit
+}: TransactionModalProps) => {
   const { currentUser } = useUser();
   const { data: paineis = [], isLoading: paineisLoading } = usePaineis();
   const { data: categorias = [] } = useCategorias();
@@ -35,27 +44,54 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
     ? paineis.filter(p => p.usuario_id === currentUser.id)
     : [];
 
-  const [formData, setFormData] = useState({
-    date: getCurrentDate(),
-    description: "",
-    value: "",
-    type: "" as "entrada" | "saida" | "",
-    category: "",
-    location: "",
-    recurrence: "" as "diario" | "semanal" | "mensal" | "ocasional" | "",
-    painel_id: undefined as number | undefined,
-    tipo_divisao: "PESSOAL" as "PESSOAL" | "COMPARTILHADO_50_50" | "COMPARTILHADO_CUSTOM" | "",
-    porcentagem_divisao: "",
-    data_vencimento: "",
-    status_pagamento: "PENDENTE" as "PENDENTE" | "PAGO" | "VENCIDO" | "",
-    parcelas: 1,
-    eh_parcelado: false,
-  });
+  const getInitialFormData = () => {
+    if (mode === "edit" && transactionToEdit) {
+      return {
+        date: transactionToEdit.date,
+        description: transactionToEdit.description || "",
+        value: transactionToEdit.value.toString(),
+        type: transactionToEdit.type,
+        category: transactionToEdit.category,
+        location: transactionToEdit.location || "",
+        recurrence: transactionToEdit.recurrence,
+        painel_id: transactionToEdit.painel_id,
+        tipo_divisao: transactionToEdit.tipo_divisao || "PESSOAL",
+        porcentagem_divisao: transactionToEdit.porcentagem_divisao?.toString() || "",
+        data_vencimento: transactionToEdit.data_vencimento || "",
+        status_pagamento: transactionToEdit.status_pagamento || "PENDENTE",
+        parcelas: transactionToEdit.parcelas || 1,
+        eh_parcelado: !!transactionToEdit.parcelas && transactionToEdit.parcelas > 1,
+      };
+    }
+    return {
+      date: getCurrentDate(),
+      description: "",
+      value: "",
+      type: "" as "entrada" | "saida" | "",
+      category: "",
+      location: "",
+      recurrence: "" as "diario" | "semanal" | "mensal" | "ocasional" | "",
+      painel_id: undefined as number | undefined,
+      tipo_divisao: "PESSOAL" as "PESSOAL" | "COMPARTILHADO_50_50" | "COMPARTILHADO_CUSTOM" | "",
+      porcentagem_divisao: "",
+      data_vencimento: "",
+      status_pagamento: "PENDENTE" as "PENDENTE" | "PAGO" | "VENCIDO" | "",
+      parcelas: 1,
+      eh_parcelado: false,
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialFormData());
 
   const [locationOpen, setLocationOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
+
+  // Reset form when mode or transactionToEdit changes
+  useEffect(() => {
+    setFormData(getInitialFormData());
+  }, [mode, transactionToEdit, isOpen]);
 
   // Calcular valor por pessoa automaticamente
   const calcularValorPorPessoa = (): number | null => {
@@ -151,7 +187,7 @@ export const TransactionModal = ({ isOpen, onClose, onSubmit, existingLocations 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nova Transação</DialogTitle>
+          <DialogTitle>{mode === "edit" ? "Editar Transação" : "Nova Transação"}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
