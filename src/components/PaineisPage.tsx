@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { PaineisTable } from "./PaineisTable";
 import { PainelModal } from "./PainelModal";
 import { Navigation } from "./Navigation";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { usePaineis, useDeletePainel } from "@/hooks/usePaineis";
 import type { Painel } from "@/types/painel";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export const PaineisPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,7 +18,12 @@ export const PaineisPage = () => {
 
   const handleEdit = (painel: Painel) => { setEditingPainel(painel); setIsModalOpen(true); };
   const handleDelete = (painel: Painel) => setDeletingPainel(painel);
-  const confirmDelete = () => { if (deletingPainel) { deletePainel.mutate(deletingPainel.id); setDeletingPainel(null); } };
+  const confirmDelete = async () => {
+    if (deletingPainel) {
+      await deletePainel.mutateAsync(deletingPainel.id);
+      setDeletingPainel(null);
+    }
+  };
   const handleCloseModal = () => { setIsModalOpen(false); setEditingPainel(null); };
 
   if (error) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-center"><h2 className="text-2xl font-bold text-destructive mb-2">Erro ao carregar cartões</h2><p className="text-muted-foreground">{error instanceof Error ? error.message : 'Erro desconhecido'}</p><Button onClick={() => window.location.reload()} className="mt-4">Tentar novamente</Button></div></div>;
@@ -37,7 +42,14 @@ export const PaineisPage = () => {
         </div>
       </main>
       <PainelModal isOpen={isModalOpen} onClose={handleCloseModal} painel={editingPainel} />
-      <AlertDialog open={!!deletingPainel} onOpenChange={() => setDeletingPainel(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle><AlertDialogDescription>Tem certeza que deseja excluir o cartão "{deletingPainel?.nome}"? Esta ação removerá todas as transações associadas.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <ConfirmDeleteDialog
+        isOpen={!!deletingPainel}
+        onClose={() => setDeletingPainel(null)}
+        onConfirm={confirmDelete}
+        title="Excluir Cartão"
+        description={`Tem certeza que deseja excluir o cartão "${deletingPainel?.nome}"? Esta ação removerá todas as transações associadas.`}
+        isLoading={deletePainel.isPending}
+      />
     </div>
   );
 };

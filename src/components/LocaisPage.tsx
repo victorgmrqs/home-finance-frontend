@@ -4,20 +4,11 @@ import { Button } from "@/components/ui/button";
 import { LocaisTable } from "./LocaisTable";
 import { LocalModal } from "./LocalModal";
 import { LocaisFilters } from "./LocaisFilters";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { useLocais, useDeleteLocal } from "@/hooks/useLocais";
 import { Navigation } from "./Navigation";
 import type { Local } from "@/types/local";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 export const LocaisPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,9 +33,9 @@ export const LocaisPage = () => {
     setDeletingLocal(local);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deletingLocal) {
-      deleteLocal.mutate(deletingLocal.id);
+      await deleteLocal.mutateAsync(deletingLocal.id);
       setDeletingLocal(null);
     }
   };
@@ -131,23 +122,14 @@ export const LocaisPage = () => {
       />
 
       {/* Dialog de Confirmação de Exclusão */}
-      <AlertDialog open={!!deletingLocal} onOpenChange={() => setDeletingLocal(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o local "{deletingLocal?.nome_fantasia || 'Sem nome'}"?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        isOpen={!!deletingLocal}
+        onClose={() => setDeletingLocal(null)}
+        onConfirm={confirmDelete}
+        title="Excluir Local"
+        description={`Tem certeza que deseja excluir o local "${deletingLocal?.nome_fantasia || 'Sem nome'}"? Esta ação não pode ser desfeita.`}
+        isLoading={deleteLocal.isPending}
+      />
     </div>
   );
 };

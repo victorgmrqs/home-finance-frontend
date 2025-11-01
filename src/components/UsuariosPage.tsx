@@ -4,19 +4,10 @@ import { Button } from "@/components/ui/button";
 import { UsuariosTable } from "./UsuariosTable";
 import { UsuarioModal } from "./UsuarioModal";
 import { Navigation } from "./Navigation";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { useUsuarios, useDeleteUsuario } from "@/hooks/useUsuarios";
 import type { Usuario } from "@/types/usuario";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 export const UsuariosPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,9 +26,9 @@ export const UsuariosPage = () => {
     setDeletingUsuario(usuario);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deletingUsuario) {
-      deleteUsuario.mutate(deletingUsuario.id);
+      await deleteUsuario.mutateAsync(deletingUsuario.id);
       setDeletingUsuario(null);
     }
   };
@@ -102,23 +93,14 @@ export const UsuariosPage = () => {
 
       <UsuarioModal isOpen={isModalOpen} onClose={handleCloseModal} usuario={editingUsuario} />
 
-      <AlertDialog open={!!deletingUsuario} onOpenChange={() => setDeletingUsuario(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o usuário "{deletingUsuario?.nome}"?
-              Esta ação não pode ser desfeita e removerá todos os painéis e transações associados.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        isOpen={!!deletingUsuario}
+        onClose={() => setDeletingUsuario(null)}
+        onConfirm={confirmDelete}
+        title="Excluir Usuário"
+        description={`Tem certeza que deseja excluir o usuário "${deletingUsuario?.nome}"? Esta ação não pode ser desfeita e removerá todos os painéis e transações associados.`}
+        isLoading={deleteUsuario.isPending}
+      />
     </div>
   );
 };
