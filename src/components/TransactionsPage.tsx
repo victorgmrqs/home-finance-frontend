@@ -15,6 +15,11 @@ export interface Transaction {
   category: string;
   location: string;
   recurrence: "diario" | "semanal" | "mensal" | "ocasional";
+  tipo_divisao?: "PESSOAL" | "COMPARTILHADO_50_50" | "COMPARTILHADO_CUSTOM";
+  valor_por_pessoa?: number | null;
+  porcentagem_divisao?: number | null;
+  data_vencimento?: string | null;
+  status_pagamento?: "PENDENTE" | "PAGO" | "VENCIDO";
 }
 
 // Mock data
