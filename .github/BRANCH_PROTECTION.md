@@ -23,9 +23,30 @@ Este documento explica como configurar a proteção de branches no GitHub para i
 2. Clique em **Settings** (Configurações)
 3. No menu lateral, clique em **Branches**
 
+### Escolha: Qual Opção Usar?
+
+Ao clicar em **Branches**, você verá duas opções:
+
+1. **"Add branch ruleset"** (Novo - Avançado)
+   - ✅ Mais moderno e flexível
+   - ✅ Permite regras mais complexas e condicionais
+   - ✅ Melhor para organizações e workflows avançados
+   - ⚠️ Interface mais complexa
+   - 📖 Veja `.github/BRANCH_RULESET.md` para instruções detalhadas
+
+2. **"Add classic branch protection rule"** (Clássico - Simples)
+   - ✅ Mais simples e direto
+   - ✅ Ideal para projetos pequenos/médios
+   - ✅ Todas as funcionalidades essenciais
+   - ✅ Recomendado para começar
+
+**Recomendação:** Use **"Add classic branch protection rule"** para projetos pessoais/pequenos. É mais simples e tem todas as funcionalidades necessárias para o seu caso de uso.
+
 ### Passo 2: Proteger a Branch `main`
 
-1. Clique em **Add branch protection rule** (Adicionar regra de proteção de branch)
+**Se escolheu "Classic branch protection rule":**
+
+1. Clique em **Add classic branch protection rule**
 2. Em **Branch name pattern**, digite: `main`
 3. Configure as seguintes opções:
 
