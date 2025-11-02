@@ -39,10 +39,11 @@ export function useCreateTransaction() {
         description: 'Transação criada com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error | unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar transação.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao criar transação.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -63,10 +64,11 @@ export function useUpdateTransaction() {
         description: 'Transação atualizada com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error | unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar transação.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao atualizar transação.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -86,10 +88,11 @@ export function useDeleteTransaction() {
         description: 'Transação removida com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error | unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao remover transação.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao remover transação.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },

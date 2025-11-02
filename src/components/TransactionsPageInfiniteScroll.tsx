@@ -3,7 +3,7 @@
  * Component with infinite scroll for loading transactions
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TransactionFilters } from "./TransactionFilters";
@@ -13,14 +13,27 @@ import { Navigation } from "./Navigation";
 import { useInfiniteTransactions } from "@/hooks/useInfiniteTransactions";
 import { useLocais, useCreateLocal } from "@/hooks/useLocais";
 import { useCreateTransaction } from "@/hooks/useTransactions";
-import type { TransactionCreateInput } from "@/types/transaction";
+import type { TransactionCreateInput, Transaction as APITransaction, RecurrenceType } from "@/types/transaction";
+import type { Local } from "@/types/local";
+import type { Transaction } from "./TransactionsPage";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Adapter to convert backend format to frontend format
-function adaptTransaction(apiTransaction: any, locais: any[] = []) {
+function adaptTransaction(apiTransaction: APITransaction, locais: Local[] = []): Transaction {
   // Find the local name by local_id
   const local = locais.find(l => l.id === apiTransaction.local_id);
-  const locationName = local ? local.nome_fantasia || `Local ${apiTransaction.local_id}` : "Sem local";
+  const locationName = local ? (local.nome_fantasia || `Local ${apiTransaction.local_id}`) : "Sem local";
+  
+  const recurrenceMap: Record<string, "diario" | "semanal" | "mensal" | "ocasional"> = {
+    'DIARIO': 'diario',
+    'SEMANAL': 'semanal',
+    'MENSAL': 'mensal',
+    'OCASIONAL': 'ocasional',
+  };
+  
+  const recurrence = apiTransaction.recorrencia 
+    ? (recurrenceMap[apiTransaction.recorrencia] || 'ocasional')
+    : 'ocasional';
   
   return {
     id: apiTransaction.id.toString(),
@@ -30,7 +43,7 @@ function adaptTransaction(apiTransaction: any, locais: any[] = []) {
     type: apiTransaction.tipo.toLowerCase() as "entrada" | "saida",
     category: apiTransaction.categoria,
     location: apiTransaction.local_id ? locationName : "Sem local",
-    recurrence: apiTransaction.recorrencia?.toLowerCase() || "ocasional" as any,
+    recurrence,
     tipo_divisao: apiTransaction.tipo_divisao,
     valor_por_pessoa: apiTransaction.valor_por_pessoa,
     porcentagem_divisao: apiTransaction.porcentagem_divisao,
@@ -39,9 +52,19 @@ function adaptTransaction(apiTransaction: any, locais: any[] = []) {
   };
 }
 
+interface TransactionFiltersState {
+  tipo?: string;
+  categoria?: string;
+  descricao?: string;
+  location?: string;
+  painel_id?: number;
+  mes?: string;
+  local_search?: string;
+}
+
 export const TransactionsPageInfiniteScroll = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filters, setFilters] = useState<any>({ painel_id: 1 });
+  const [filters, setFilters] = useState<TransactionFiltersState>({ painel_id: 1 });
   const itemsPerPage = 20;
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -91,18 +114,20 @@ export const TransactionsPageInfiniteScroll = () => {
   }, [hasMore, isLoading, isLoadingMore, loadMore]);
 
   // Reset when filters change
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+  
   useEffect(() => {
     reset();
-  }, [JSON.stringify(filters), reset]);
+  }, [filtersKey, reset]);
 
   const adaptedTransactions = transactions.map(transaction => adaptTransaction(transaction, locais));
 
-  const handleAddTransaction = async (transaction: Omit<any, "id">) => {
+  const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     let localId: number | undefined;
     
     if (transaction.location && transaction.location !== 'Não informado') {
       // First, try to find existing local
-      const existingLocal = locais.find((l: any) => {
+      const existingLocal = locais.find((l: Local) => {
         const localName = l.nome_fantasia || l.id.toString();
         return localName === transaction.location;
       });
@@ -125,6 +150,13 @@ export const TransactionsPageInfiniteScroll = () => {
       }
     }
 
+    const recurrenceMap: Record<string, RecurrenceType> = {
+      'diario': 'DIARIO',
+      'semanal': 'SEMANAL',
+      'mensal': 'MENSAL',
+      'ocasional': 'OCASIONAL',
+    };
+
     // Convert frontend format to backend format
     const apiData: TransactionCreateInput = {
       data: transaction.date,
@@ -132,7 +164,7 @@ export const TransactionsPageInfiniteScroll = () => {
       valor: transaction.value,
       tipo: transaction.type.toUpperCase() as "ENTRADA" | "SAIDA",
       categoria: transaction.category,
-      recorrencia: transaction.recurrence?.toUpperCase() as any,
+      recorrencia: transaction.recurrence ? (recurrenceMap[transaction.recurrence] || 'OCASIONAL') : undefined,
       local_id: localId,
       painel_id: filters.painel_id || 1, // Default to first painel if not specified
     };
@@ -146,7 +178,7 @@ export const TransactionsPageInfiniteScroll = () => {
     }
   };
 
-  const handleFilter = (filtered: any[]) => {
+  const handleFilter = (filtered: TransactionFiltersState) => {
     // Update filters state to trigger API refetch
     setFilters(filtered);
   };
@@ -196,7 +228,7 @@ export const TransactionsPageInfiniteScroll = () => {
         {/* Filtros */}
         <TransactionFilters
           transactions={adaptedTransactions}
-          onFilter={(filtered: { tipo?: string; categoria?: string; descricao?: string; location?: string; }) => handleFilter(filtered as any[])}
+          onFilter={(filtered: TransactionFiltersState) => handleFilter(filtered)}
         />
 
         {/* Tabela */}
@@ -229,7 +261,7 @@ export const TransactionsPageInfiniteScroll = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleAddTransaction}
-        existingLocations={Array.from(new Set(locais.map((l: any) => l.nome_fantasia || l.id.toString())))}
+        existingLocations={Array.from(new Set(locais.map((l: Local) => l.nome_fantasia || l.id.toString())))}
       />
     </div>
   );
