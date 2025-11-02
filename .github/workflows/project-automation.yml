@@ -1,0 +1,471 @@
+name: GitHub Projects Automation
+
+on:
+  pull_request:
+    types: [opened, closed, ready_for_review]
+  issues:
+    types: [opened, closed]
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  move-to-in-review:
+    name: Mover para "Em Revisão"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.state == 'open' && (github.event.action == 'opened' || github.event.action == 'ready_for_review')
+    steps:
+      - name: Obter informações do PR
+        id: pr-info
+        run: |
+          echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "title=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+          echo "body=${{ github.event.pull_request.body }}" >> $GITHUB_OUTPUT
+
+      - name: Extrair números de issues do PR
+        id: extract-issues
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          
+          # Extrair referências de issues do corpo e título do PR (formato: #123, closes #123, fixes #123, etc)
+          ISSUES=$(echo "$PR_BODY $PR_TITLE" | grep -oP '(?:closes?|fixes?|resolves?|refs?)\s*#\d+|#\d+' | grep -oP '#\d+' | sed 's/#//' | sort -u | tr '\n' ',' | sed 's/,$//')
+          
+          if [ -z "$ISSUES" ]; then
+            echo "Não foram encontradas referências de issues no PR"
+            echo "issues=" >> $GITHUB_OUTPUT
+          else
+            echo "Issues encontradas: $ISSUES"
+            echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Obter informações do projeto
+        id: project-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Usar GraphQL para Projects v2
+            const query = `
+              query($owner: String!, $repo: String!) {
+                repository(owner: $owner, name: $repo) {
+                  projectsV2(first: 10) {
+                    nodes {
+                      id
+                      title
+                      number
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            };
+            
+            const result = await github.graphql(query, variables);
+            const projects = result.repository?.projectsV2?.nodes || [];
+            
+            if (projects.length === 0) {
+              core.setOutput('project_id', '');
+              core.setOutput('project_number', '');
+              core.warning('Nenhum projeto encontrado. Crie um projeto no repositório.');
+              return;
+            }
+            
+            // Usar o primeiro projeto encontrado
+            const project = projects[0];
+            core.setOutput('project_id', project.id);
+            core.setOutput('project_number', project.number);
+            console.log(`Projeto encontrado: ${project.title} (ID: ${project.id})`);
+
+      - name: Mover issues para "Em Revisão"
+        if: steps.extract-issues.outputs.issues != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = '${{ steps.extract-issues.outputs.issues }}'.split(',').filter(Boolean);
+            const projectId = '${{ steps.project-info.outputs.project_id }}';
+            
+            if (!projectId) {
+              core.warning('Nenhum projeto encontrado. Configure um projeto no repositório.');
+              return;
+            }
+            
+            // Nome da coluna/status de destino (ajuste conforme seu projeto)
+            const targetStatusName = 'Em revisão';
+            
+            for (const issueNumber of issues) {
+              try {
+                // Obter o Node ID da issue via GraphQL
+                const issueQuery = `
+                  query($owner: String!, $repo: String!, $issueNumber: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                      issue(number: $issueNumber) {
+                        id
+                        number
+                      }
+                    }
+                  }
+                `;
+                
+                const issueResult = await github.graphql(issueQuery, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issueNumber: parseInt(issueNumber),
+                });
+                
+                const issue = issueResult.repository?.issue;
+                if (!issue) {
+                  core.warning(`Issue #${issueNumber} não encontrada`);
+                  continue;
+                }
+                
+                // GraphQL: Buscar o item no projeto
+                const findItemQuery = `
+                  query($projectId: ID!) {
+                    node(id: $projectId) {
+                      ... on ProjectV2 {
+                        items(first: 100) {
+                          nodes {
+                            id
+                            content {
+                              ... on Issue {
+                                id
+                                number
+                              }
+                            }
+                          }
+                        }
+                        fields(first: 20) {
+                          nodes {
+                            ... on ProjectV2SingleSelectField {
+                              id
+                              name
+                              options {
+                                id
+                                name
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `;
+                
+                const findResult = await github.graphql(findItemQuery, {
+                  projectId: projectId,
+                });
+                
+                const project = findResult.node;
+                if (!project) {
+                  core.warning(`Projeto não encontrado`);
+                  continue;
+                }
+                
+                // Procurar o item da issue no projeto
+                let itemId = null;
+                for (const item of project.items.nodes) {
+                  if (item.content && item.content.id === issue.id) {
+                    itemId = item.id;
+                    break;
+                  }
+                }
+                
+                if (!itemId) {
+                  // Adicionar a issue ao projeto
+                  const addItemMutation = `
+                    mutation($projectId: ID!, $contentId: ID!) {
+                      addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                        item {
+                          id
+                        }
+                      }
+                    }
+                  `;
+                  
+                  await github.graphql(addItemMutation, {
+                    projectId: projectId,
+                    contentId: issue.id,
+                  });
+                  
+                  // Buscar novamente o item criado
+                  const findAfterAdd = await github.graphql(findItemQuery, {
+                    projectId: projectId,
+                  });
+                  
+                  for (const item of findAfterAdd.node.items.nodes) {
+                    if (item.content && item.content.id === issue.id) {
+                      itemId = item.id;
+                      break;
+                    }
+                  }
+                }
+                
+                if (!itemId) {
+                  core.warning(`Não foi possível encontrar ou criar item para issue #${issueNumber}`);
+                  continue;
+                }
+                
+                // Encontrar o campo de status e opção correspondente
+                let statusFieldId = null;
+                let statusOptionId = null;
+                
+                for (const field of project.fields.nodes) {
+                  if (field.name.toLowerCase() === 'status' || field.name.toLowerCase() === 'estado') {
+                    statusFieldId = field.id;
+                    for (const option of field.options) {
+                      if (option.name.toLowerCase() === targetStatusName.toLowerCase()) {
+                        statusOptionId = option.id;
+                        break;
+                      }
+                    }
+                    break;
+                  }
+                }
+                
+                if (!statusFieldId || !statusOptionId) {
+                  core.warning(`Campo de status ou opção "${targetStatusName}" não encontrado no projeto`);
+                  continue;
+                }
+                
+                // Atualizar o status do item
+                const updateItemMutation = `
+                  mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: $projectId
+                        itemId: $itemId
+                        fieldId: $fieldId
+                        value: { singleSelectOptionId: $optionId }
+                      }
+                    ) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                `;
+                
+                await github.graphql(updateItemMutation, {
+                  projectId: projectId,
+                  itemId: itemId,
+                  fieldId: statusFieldId,
+                  optionId: statusOptionId,
+                });
+                
+                console.log(`✅ Issue #${issueNumber} movida para "${targetStatusName}"`);
+              } catch (error) {
+                core.warning(`Erro ao processar issue #${issueNumber}: ${error.message}`);
+                console.error(error);
+              }
+            }
+
+  move-to-done:
+    name: Mover para "Concluído"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Extrair números de issues do PR
+        id: extract-issues
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          
+          ISSUES=$(echo "$PR_BODY $PR_TITLE" | grep -oP '(?:closes?|fixes?|resolves?|refs?)\s*#\d+|#\d+' | grep -oP '#\d+' | sed 's/#//' | sort -u | tr '\n' ',' | sed 's/,$//')
+          
+          if [ -z "$ISSUES" ]; then
+            echo "issues=" >> $GITHUB_OUTPUT
+          else
+            echo "Issues encontradas: $ISSUES"
+            echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Obter informações do projeto
+        id: project-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const query = `
+              query($owner: String!, $repo: String!) {
+                repository(owner: $owner, name: $repo) {
+                  projectsV2(first: 10) {
+                    nodes {
+                      id
+                      title
+                      number
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            
+            const projects = result.repository?.projectsV2?.nodes || [];
+            
+            if (projects.length === 0) {
+              core.setOutput('project_id', '');
+              return;
+            }
+            
+            const project = projects[0];
+            core.setOutput('project_id', project.id);
+
+      - name: Mover issues para "Concluído"
+        if: steps.extract-issues.outputs.issues != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = '${{ steps.extract-issues.outputs.issues }}'.split(',').filter(Boolean);
+            const projectId = '${{ steps.project-info.outputs.project_id }}';
+            
+            if (!projectId) {
+              core.warning('Nenhum projeto encontrado.');
+              return;
+            }
+            
+            // Nome da coluna/status de destino (ajuste conforme seu projeto)
+            const targetStatusName = 'Concluído';
+            
+            for (const issueNumber of issues) {
+              try {
+                // Obter o Node ID da issue via GraphQL
+                const issueQuery = `
+                  query($owner: String!, $repo: String!, $issueNumber: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                      issue(number: $issueNumber) {
+                        id
+                        number
+                      }
+                    }
+                  }
+                `;
+                
+                const issueResult = await github.graphql(issueQuery, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issueNumber: parseInt(issueNumber),
+                });
+                
+                const issue = issueResult.repository?.issue;
+                if (!issue) {
+                  core.warning(`Issue #${issueNumber} não encontrada`);
+                  continue;
+                }
+                
+                // GraphQL: Buscar o item no projeto
+                const findItemQuery = `
+                  query($projectId: ID!) {
+                    node(id: $projectId) {
+                      ... on ProjectV2 {
+                        items(first: 100) {
+                          nodes {
+                            id
+                            content {
+                              ... on Issue {
+                                id
+                                number
+                              }
+                            }
+                          }
+                        }
+                        fields(first: 20) {
+                          nodes {
+                            ... on ProjectV2SingleSelectField {
+                              id
+                              name
+                              options {
+                                id
+                                name
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `;
+                
+                const findResult = await github.graphql(findItemQuery, {
+                  projectId: projectId,
+                });
+                
+                const project = findResult.node;
+                if (!project) {
+                  continue;
+                }
+                
+                // Procurar o item da issue no projeto
+                let itemId = null;
+                for (const item of project.items.nodes) {
+                  if (item.content && item.content.id === issue.id) {
+                    itemId = item.id;
+                    break;
+                  }
+                }
+                
+                if (!itemId) {
+                  core.warning(`Issue #${issueNumber} não encontrada no projeto`);
+                  continue;
+                }
+                
+                // Encontrar o campo de status e opção correspondente
+                let statusFieldId = null;
+                let statusOptionId = null;
+                
+                for (const field of project.fields.nodes) {
+                  if (field.name.toLowerCase() === 'status' || field.name.toLowerCase() === 'estado') {
+                    statusFieldId = field.id;
+                    for (const option of field.options) {
+                      if (option.name.toLowerCase() === targetStatusName.toLowerCase()) {
+                        statusOptionId = option.id;
+                        break;
+                      }
+                    }
+                    break;
+                  }
+                }
+                
+                if (!statusFieldId || !statusOptionId) {
+                  core.warning(`Campo de status ou opção "${targetStatusName}" não encontrado`);
+                  continue;
+                }
+                
+                // Atualizar o status do item
+                const updateItemMutation = `
+                  mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                    updateProjectV2ItemFieldValue(
+                      input: {
+                        projectId: $projectId
+                        itemId: $itemId
+                        fieldId: $fieldId
+                        value: { singleSelectOptionId: $optionId }
+                      }
+                    ) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                `;
+                
+                await github.graphql(updateItemMutation, {
+                  projectId: projectId,
+                  itemId: itemId,
+                  fieldId: statusFieldId,
+                  optionId: statusOptionId,
+                });
+                
+                console.log(`✅ Issue #${issueNumber} movida para "${targetStatusName}"`);
+              } catch (error) {
+                core.warning(`Erro ao processar issue #${issueNumber}: ${error.message}`);
+                console.error(error);
+              }
+            }
+
