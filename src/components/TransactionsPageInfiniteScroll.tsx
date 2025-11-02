@@ -6,14 +6,14 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TransactionFilters } from "./TransactionFilters";
+import { TransactionFilters as TransactionFiltersComponent } from "./TransactionFilters";
 import { TransactionTable } from "./TransactionTable";
 import { TransactionModal } from "./TransactionModal";
 import { Navigation } from "./Navigation";
 import { useInfiniteTransactions } from "@/hooks/useInfiniteTransactions";
 import { useLocais, useCreateLocal } from "@/hooks/useLocais";
 import { useCreateTransaction } from "@/hooks/useTransactions";
-import type { TransactionCreateInput, Transaction as APITransaction, RecurrenceType } from "@/types/transaction";
+import type { TransactionCreateInput, Transaction as APITransaction, RecurrenceType, TransactionFilters } from "@/types/transaction";
 import type { Local } from "@/types/local";
 import type { Transaction } from "./TransactionsPage";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,6 +62,32 @@ interface TransactionFiltersState {
   local_search?: string;
 }
 
+// Convert TransactionFiltersState to TransactionFilters format for API
+const convertFiltersToAPI = (filters: TransactionFiltersState): TransactionFilters => {
+  const apiFilters: TransactionFilters = {};
+  
+  if (filters.painel_id) {
+    apiFilters.painel_id = filters.painel_id;
+  }
+  if (filters.mes) {
+    apiFilters.mes = filters.mes;
+  }
+  if (filters.categoria) {
+    apiFilters.categoria = filters.categoria;
+  }
+  if (filters.descricao) {
+    apiFilters.descricao = filters.descricao;
+  }
+  if (filters.local_search) {
+    apiFilters.local_search = filters.local_search;
+  }
+  if (filters.tipo && (filters.tipo === 'ENTRADA' || filters.tipo === 'SAIDA')) {
+    apiFilters.tipo = filters.tipo;
+  }
+  
+  return apiFilters;
+};
+
 export const TransactionsPageInfiniteScroll = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filters, setFilters] = useState<TransactionFiltersState>({ painel_id: 1 });
@@ -79,7 +105,7 @@ export const TransactionsPageInfiniteScroll = () => {
     reset,
   } = useInfiniteTransactions({
     itemsPerPage,
-    filters,
+    filters: convertFiltersToAPI(filters),
   });
 
   // Fetch locais for dropdown
@@ -122,33 +148,37 @@ export const TransactionsPageInfiniteScroll = () => {
 
   const adaptedTransactions = transactions.map(transaction => adaptTransaction(transaction, locais));
 
-  const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
-    let localId: number | undefined;
-    
-    if (transaction.location && transaction.location !== 'Não informado') {
-      // First, try to find existing local
-      const existingLocal = locais.find((l: Local) => {
-        const localName = l.nome_fantasia || l.id.toString();
-        return localName === transaction.location;
-      });
-      
-      if (existingLocal) {
-        // Local exists, use its ID
-        localId = existingLocal.id;
-      } else {
-        // Local doesn't exist, create it automatically
-        try {
-          const newLocal = await createLocal.mutateAsync({
-            nome_fantasia: transaction.location,
-          });
-          localId = newLocal.id;
-        } catch (error) {
-          console.error('Error creating local:', error);
-          // If local creation fails, proceed without local_id
-          localId = undefined;
-        }
-      }
+  // Helper function to get or create local ID
+  const getOrCreateLocalId = async (locationName: string): Promise<number | undefined> => {
+    if (!locationName || locationName === 'Não informado') {
+      return undefined;
     }
+
+    // First, try to find existing local
+    const existingLocal = locais.find((l: Local) => {
+      const localName = l.nome_fantasia || l.id.toString();
+      return localName === locationName;
+    });
+
+    if (existingLocal) {
+      return existingLocal.id;
+    }
+
+    // Local doesn't exist, create it automatically
+    try {
+      const newLocal = await createLocal.mutateAsync({
+        nome_fantasia: locationName,
+      });
+      return newLocal.id;
+    } catch (error) {
+      console.error('Error creating local:', error);
+      // If local creation fails, proceed without local_id
+      return undefined;
+    }
+  };
+
+  const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
+    const localId = await getOrCreateLocalId(transaction.location || '');
 
     const recurrenceMap: Record<string, RecurrenceType> = {
       'diario': 'DIARIO',
@@ -226,7 +256,7 @@ export const TransactionsPageInfiniteScroll = () => {
         </div>
 
         {/* Filtros */}
-        <TransactionFilters
+        <TransactionFiltersComponent
           transactions={adaptedTransactions}
           onFilter={(filtered: TransactionFiltersState) => handleFilter(filtered)}
         />
