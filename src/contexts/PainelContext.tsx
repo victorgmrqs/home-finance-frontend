@@ -6,15 +6,16 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-type PainelContextType = Record<string, never>;
+interface PainelContextType {
+  // Add any painel-related state/functions here if needed in the future
+}
 
 const PainelContext = createContext<PainelContextType | undefined>(undefined);
 
 export function PainelProvider({ children }: { children: ReactNode }) {
   // For now, just provide an empty context value
   // This can be expanded later if needed
-  const value: PainelContextType = {} as PainelContextType;
+  const value: PainelContextType = {};
 
   return (
     <PainelContext.Provider value={value}>
