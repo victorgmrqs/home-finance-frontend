@@ -3,6 +3,12 @@
  * Centralized service for making HTTP requests to the backend
  */
 
+import type { Transaction } from '@/types/transaction';
+import type { Local } from '@/types/local';
+import type { Usuario } from '@/types/usuario';
+import type { Painel, PainelUsuario } from '@/types/painel';
+import type { Categoria } from '@/types/categoria';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 interface ApiResponse<T> {
@@ -96,11 +102,11 @@ export const api = {
       if (params?.local_search) queryParams.append('local_search', params.local_search);
 
       const query = queryParams.toString();
-      return fetchApi<any[]>(`/transactions${query ? `?${query}` : ''}`);
+      return fetchApi<Transaction[]>(`/transactions${query ? `?${query}` : ''}`);
     },
 
     get: async (id: number) => {
-      return fetchApi<any>(`/transactions/${id}`);
+      return fetchApi<Transaction>(`/transactions/${id}`);
     },
 
     create: async (data: {
@@ -119,7 +125,7 @@ export const api = {
       data_vencimento?: string; // ✅ NOVO
       status_pagamento?: 'PENDENTE' | 'PAGO' | 'VENCIDO'; // ✅ NOVO
     }) => {
-      return fetchApi<any>('/transactions', {
+      return fetchApi<Transaction>('/transactions', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -141,7 +147,7 @@ export const api = {
       data_vencimento?: string; // ✅ NOVO
       status_pagamento?: 'PENDENTE' | 'PAGO' | 'VENCIDO'; // ✅ NOVO
     }>) => {
-      return fetchApi<any>(`/transactions/${id}`, {
+      return fetchApi<Transaction>(`/transactions/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -156,17 +162,18 @@ export const api = {
 
   // Locais
   locais: {
-    list: async (params?: { limit?: number; offset?: number }) => {
+    list: async (params?: { limit?: number; offset?: number; nome?: string }) => {
       const queryParams = new URLSearchParams();
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.offset) queryParams.append('offset', params.offset.toString());
+      if (params?.nome) queryParams.append('nome', params.nome);
 
       const query = queryParams.toString();
-      return fetchApi<any[]>(`/locais${query ? `?${query}` : ''}`);
+      return fetchApi<Local[]>(`/locais${query ? `?${query}` : ''}`);
     },
 
     get: async (id: number) => {
-      return fetchApi<any>(`/locais/${id}`);
+      return fetchApi<Local>(`/locais/${id}`);
     },
 
     create: async (data: {
@@ -176,7 +183,7 @@ export const api = {
       categoria?: string;
       endereco?: string;
     }) => {
-      return fetchApi<any>('/locais', {
+      return fetchApi<Local>('/locais', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -189,7 +196,7 @@ export const api = {
       categoria?: string;
       endereco?: string;
     }>) => {
-      return fetchApi<any>(`/locais/${id}`, {
+      return fetchApi<Local>(`/locais/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -210,18 +217,18 @@ export const api = {
       if (params?.offset !== undefined) queryParams.append('offset', params.offset.toString());
 
       const query = queryParams.toString();
-      return fetchApi<any[]>(`/usuarios${query ? `?${query}` : ''}`);
+      return fetchApi<Usuario[]>(`/usuarios${query ? `?${query}` : ''}`);
     },
 
     get: async (id: number) => {
-      return fetchApi<any>(`/usuarios/${id}`);
+      return fetchApi<Usuario>(`/usuarios/${id}`);
     },
 
     create: async (data: {
       nome: string;
       email?: string;
     }) => {
-      return fetchApi<any>('/usuarios', {
+      return fetchApi<Usuario>('/usuarios', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -231,7 +238,7 @@ export const api = {
       nome: string;
       email?: string;
     }>) => {
-      return fetchApi<any>(`/usuarios/${id}`, {
+      return fetchApi<Usuario>(`/usuarios/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -244,7 +251,7 @@ export const api = {
     },
 
     getByEmail: async (email: string) => {
-      return fetchApi<any>(`/usuarios/email/${email}`);
+      return fetchApi<Usuario>(`/usuarios/email/${email}`);
     },
   },
 
@@ -257,11 +264,11 @@ export const api = {
       if (params?.usuario_id) queryParams.append('usuario_id', params.usuario_id.toString());
 
       const query = queryParams.toString();
-      return fetchApi<any[]>(`/paineis${query ? `?${query}` : ''}`);
+      return fetchApi<Painel[]>(`/paineis${query ? `?${query}` : ''}`);
     },
 
     get: async (id: number) => {
-      return fetchApi<any>(`/paineis/${id}`);
+      return fetchApi<Painel>(`/paineis/${id}`);
     },
 
     create: async (data: {
@@ -270,7 +277,7 @@ export const api = {
       tipo_conta: 'CARTAO_CREDITO' | 'CONTA_BANCARIA' | 'DINHEIRO'; // ✅ OBRIGATÓRIO
       usuario_id: number;
     }) => {
-      return fetchApi<any>('/paineis', {
+      return fetchApi<Painel>('/paineis', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -282,7 +289,7 @@ export const api = {
       tipo_conta?: 'CARTAO_CREDITO' | 'CONTA_BANCARIA' | 'DINHEIRO'; // ✅ NOVO
       usuario_id: number;
     }>) => {
-      return fetchApi<any>(`/paineis/${id}`, {
+      return fetchApi<Painel>(`/paineis/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -295,7 +302,7 @@ export const api = {
     },
 
     getByUsuario: async (usuarioId: number) => {
-      return fetchApi<any[]>(`/usuarios/${usuarioId}/paineis`);
+      return fetchApi<Painel[]>(`/usuarios/${usuarioId}/paineis`);
     },
 
     // ✅ NOVOS ENDPOINTS
@@ -306,18 +313,18 @@ export const api = {
       if (params?.data_fim) queryParams.append('data_fim', params.data_fim);
 
       const query = queryParams.toString();
-      return fetchApi<any>(`/paineis/${painelId}/balanco${query ? `?${query}` : ''}`);
+      return fetchApi<{ balanco: number; entradas: number; saidas: number }>(`/paineis/${painelId}/balanco${query ? `?${query}` : ''}`);
     },
 
     compartilhar: async (painelId: number, data: { usuario_id: number; tipo_permissao: 'OWNER' | 'EDITOR' | 'VIEWER' }) => {
-      return fetchApi<any>(`/paineis/${painelId}/compartilhar`, {
+      return fetchApi<PainelUsuario>(`/paineis/${painelId}/compartilhar`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
     },
 
     getUsuarios: async (painelId: number) => {
-      return fetchApi<any[]>(`/paineis/${painelId}/usuarios`);
+      return fetchApi<PainelUsuario[]>(`/paineis/${painelId}/usuarios`);
     },
 
     removerUsuario: async (painelId: number, usuarioId: number) => {
@@ -334,14 +341,14 @@ export const api = {
      * Retorna categorias padrão + categorias customizadas do usuário
      */
     list: async () => {
-      return fetchApi<any[]>('/categorias');
+      return fetchApi<Categoria[]>('/categorias');
     },
 
     /**
      * Busca uma categoria específica por ID
      */
     get: async (id: number) => {
-      return fetchApi<any>(`/categorias/${id}`);
+      return fetchApi<Categoria>(`/categorias/${id}`);
     },
 
     /**
@@ -351,7 +358,7 @@ export const api = {
       nome: string;
       descricao?: string;
     }) => {
-      return fetchApi<any>('/categorias', {
+      return fetchApi<Categoria>('/categorias', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -365,7 +372,7 @@ export const api = {
       nome: string;
       descricao?: string;
     }>) => {
-      return fetchApi<any>(`/categorias/${id}`, {
+      return fetchApi<Categoria>(`/categorias/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -384,7 +391,7 @@ export const api = {
 
   // Health check
   health: async () => {
-    return fetchApi<any>('/health');
+    return fetchApi<{ status: string; timestamp: string }>('/health');
   },
 };
 

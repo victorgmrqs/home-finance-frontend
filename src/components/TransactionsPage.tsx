@@ -20,6 +20,8 @@ export interface Transaction {
   porcentagem_divisao?: number | null;
   data_vencimento?: string | null;
   status_pagamento?: "PENDENTE" | "PAGO" | "VENCIDO";
+  painel_id?: number;
+  parcelas?: number | null;
 }
 
 // Mock data
@@ -88,7 +90,51 @@ export const TransactionsPage = () => {
     setIsModalOpen(false);
   };
 
-  const handleFilter = (filtered: Transaction[]) => {
+  const handleFilter = (filterParams: {
+    tipo?: string;
+    categoria?: string;
+    descricao?: string;
+    location?: string;
+    painel_id?: number;
+    mes?: string;
+    local_search?: string;
+  }) => {
+    let filtered = [...transactions];
+
+    // Filtro por tipo
+    if (filterParams.tipo && filterParams.tipo !== "todos") {
+      filtered = filtered.filter(t => t.type === filterParams.tipo.toLowerCase());
+    }
+
+    // Filtro por categoria
+    if (filterParams.categoria && filterParams.categoria !== "todos") {
+      filtered = filtered.filter(t => t.category === filterParams.categoria);
+    }
+
+    // Filtro por descrição
+    if (filterParams.descricao) {
+      filtered = filtered.filter(t => 
+        t.description.toLowerCase().includes(filterParams.descricao!.toLowerCase())
+      );
+    }
+
+    // Filtro por local
+    if (filterParams.local_search) {
+      filtered = filtered.filter(t => 
+        t.location.toLowerCase().includes(filterParams.local_search!.toLowerCase())
+      );
+    }
+
+    // Filtro por mês
+    if (filterParams.mes) {
+      filtered = filtered.filter(t => t.date.startsWith(filterParams.mes!));
+    }
+
+    // Filtro por painel_id
+    if (filterParams.painel_id) {
+      filtered = filtered.filter(t => t.painel_id === filterParams.painel_id);
+    }
+
     setFilteredTransactions(filtered);
     setCurrentPage(1);
   };

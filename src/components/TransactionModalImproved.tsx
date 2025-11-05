@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronDown, ChevronUp, Plus, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -48,10 +48,12 @@ export const TransactionModalImproved = ({
   const [showDetails, setShowDetails] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Filtrar apenas painéis do usuário logado
-  const userPaineis = currentUser
-    ? paineis.filter(p => p.usuario_id === currentUser.id)
-    : [];
+  // Filtrar apenas painéis do usuário logado (memoizado)
+  const userPaineis = useMemo(() => {
+    return currentUser
+      ? paineis.filter(p => p.usuario_id === currentUser.id)
+      : [];
+  }, [currentUser, paineis]);
 
   // Smart Default: Lembrar último cartão usado
   const defaultPainelId = useMemo(() => {
@@ -62,7 +64,7 @@ export const TransactionModalImproved = ({
     return userPaineis[0]?.id;
   }, [userPaineis]);
 
-  const getInitialFormData = () => {
+  const getInitialFormData = useCallback(() => {
     if (mode === "edit" && transactionToEdit) {
       return {
         date: transactionToEdit.date,
@@ -99,7 +101,7 @@ export const TransactionModalImproved = ({
       parcelas: 1,
       eh_parcelado: false,
     };
-  };
+  }, [mode, transactionToEdit, defaultPainelId]);
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [locationOpen, setLocationOpen] = useState(false);
@@ -117,7 +119,7 @@ export const TransactionModalImproved = ({
     setViewMode("quick");
     setShowDetails(false);
     setShowAdvanced(false);
-  }, [mode, transactionToEdit, isOpen]);
+  }, [mode, transactionToEdit, isOpen, getInitialFormData]);
 
   // Calcular valor por pessoa automaticamente (memoizado)
   const valorPorPessoa = useMemo((): number | null => {

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateUsuario, useUpdateUsuario } from "@/hooks/useUsuarios";
-import type { Usuario } from "@/types/usuario";
+import type { Usuario, UsuarioCreateInput, UsuarioUpdateInput } from "@/types/usuario";
 
 interface UsuarioModalProps {
   isOpen: boolean;
@@ -47,14 +47,15 @@ export const UsuarioModal = ({ isOpen, onClose, usuario }: UsuarioModalProps) =>
     e.preventDefault();
     if (!validate()) return;
 
-    const data: any = { nome: formData.nome.trim() };
-    if (formData.email.trim()) data.email = formData.email.trim();
-
     try {
       if (isEditMode) {
-        await updateUsuario.mutateAsync({ id: usuario.id, data });
+        const updateData: UsuarioUpdateInput = { nome: formData.nome.trim() };
+        if (formData.email.trim()) updateData.email = formData.email.trim();
+        await updateUsuario.mutateAsync({ id: usuario.id, data: updateData });
       } else {
-        await createUsuario.mutateAsync(data);
+        const createData: UsuarioCreateInput = { nome: formData.nome.trim() };
+        if (formData.email.trim()) createData.email = formData.email.trim();
+        await createUsuario.mutateAsync(createData);
       }
       onClose();
     } catch (error) {

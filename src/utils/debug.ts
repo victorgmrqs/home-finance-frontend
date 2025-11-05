@@ -4,25 +4,25 @@
  */
 
 export const debug = {
-  log: (component: string, message: string, data?: any) => {
+  log: (component: string, message: string, data?: unknown) => {
     if (import.meta.env.DEV) {
       console.log(`[${component}] ${message}`, data !== undefined ? data : '');
     }
   },
 
-  error: (component: string, message: string, error?: any) => {
+  error: (component: string, message: string, error?: unknown) => {
     if (import.meta.env.DEV) {
       console.error(`[${component}] ❌ ${message}`, error !== undefined ? error : '');
     }
   },
 
-  warn: (component: string, message: string, data?: any) => {
+  warn: (component: string, message: string, data?: unknown) => {
     if (import.meta.env.DEV) {
       console.warn(`[${component}] ⚠️ ${message}`, data !== undefined ? data : '');
     }
   },
 
-  success: (component: string, message: string, data?: any) => {
+  success: (component: string, message: string, data?: unknown) => {
     if (import.meta.env.DEV) {
       console.log(`[${component}] ✅ ${message}`, data !== undefined ? data : '');
     }

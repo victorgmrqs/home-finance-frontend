@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreatePainel, useUpdatePainel } from "@/hooks/usePaineis";
 import { useUsuarios } from "@/hooks/useUsuarios";
-import type { Painel, TipoConta } from "@/types/painel";
+import type { Painel, TipoConta, PainelUpdateInput } from "@/types/painel";
 
 interface PainelModalProps {
   isOpen: boolean;
@@ -48,7 +48,11 @@ export const PainelModal = ({ isOpen, onClose, painel }: PainelModalProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    const data: any = { nome: formData.nome.trim(), tipo_conta: formData.tipo_conta as TipoConta, usuario_id: parseInt(formData.usuario_id) };
+    const data: PainelUpdateInput = { 
+      nome: formData.nome.trim(), 
+      tipo_conta: formData.tipo_conta as TipoConta, 
+      usuario_id: parseInt(formData.usuario_id) 
+    };
     if (formData.descricao.trim()) data.descricao = formData.descricao.trim();
     try {
       if (isEditMode) await updatePainel.mutateAsync({ id: painel.id, data });

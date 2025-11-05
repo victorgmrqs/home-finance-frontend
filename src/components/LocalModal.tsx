@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateLocal, useUpdateLocal } from "@/hooks/useLocais";
-import type { Local } from "@/types/local";
+import type { Local, LocalUpdateInput } from "@/types/local";
 import { formatCNPJ, validateCNPJ } from "@/utils/cnpj";
 
 interface LocalModalProps {
@@ -88,10 +88,10 @@ export const LocalModal = ({ isOpen, onClose, local }: LocalModalProps) => {
     if (!validate()) return;
 
     // Remove empty fields
-    const data: any = {};
+    const data: LocalUpdateInput = {};
     Object.entries(formData).forEach(([key, value]) => {
       if (value.trim()) {
-        data[key] = value.trim();
+        data[key as keyof LocalUpdateInput] = value.trim();
       }
     });
 

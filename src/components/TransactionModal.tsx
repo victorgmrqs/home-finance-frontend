@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export const TransactionModal = ({
     ? paineis.filter(p => p.usuario_id === currentUser.id)
     : [];
 
-  const getInitialFormData = () => {
+  const getInitialFormData = useCallback(() => {
     if (mode === "edit" && transactionToEdit) {
       return {
         date: transactionToEdit.date,
@@ -83,7 +83,7 @@ export const TransactionModal = ({
       parcelas: 1,
       eh_parcelado: false,
     };
-  };
+  }, [mode, transactionToEdit]);
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [viewMode, setViewMode] = useState<"quick" | "advanced">("quick");
@@ -96,7 +96,7 @@ export const TransactionModal = ({
   // Reset form when mode or transactionToEdit changes
   useEffect(() => {
     setFormData(getInitialFormData());
-  }, [mode, transactionToEdit, isOpen]);
+  }, [mode, transactionToEdit, isOpen, getInitialFormData]);
 
   // Calcular valor por pessoa automaticamente
   const calcularValorPorPessoa = (): number | null => {

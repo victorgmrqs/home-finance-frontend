@@ -12,11 +12,21 @@ import { TransactionModal } from "./TransactionModal";
 import { Pagination } from "./Pagination";
 import { useTransactions, useCreateTransaction } from "@/hooks/useTransactions";
 import { useLocais, useCreateLocal } from "@/hooks/useLocais";
-import type { TransactionCreateInput } from "@/types/transaction";
+import type { TransactionCreateInput, Transaction, TransactionFilters as TransactionFiltersType } from "@/types/transaction";
+import type { Local } from "@/types/local";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Adapter to convert backend format to frontend format
-function adaptTransaction(apiTransaction: any, locais: any[] = []) {
+function adaptTransaction(apiTransaction: Transaction, locais: Local[] = []): {
+  id: string;
+  date: string;
+  description: string;
+  value: number;
+  type: "entrada" | "saida";
+  category: string;
+  location: string;
+  recurrence: "diario" | "semanal" | "mensal" | "ocasional";
+} {
   // Find the local name by local_id
   const local = locais.find(l => l.id === apiTransaction.local_id);
   const locationName = local ? local.nome_fantasia || `Local ${apiTransaction.local_id}` : "Sem local";
@@ -29,14 +39,14 @@ function adaptTransaction(apiTransaction: any, locais: any[] = []) {
     type: apiTransaction.tipo.toLowerCase() as "entrada" | "saida",
     category: apiTransaction.categoria,
     location: apiTransaction.local_id ? locationName : "Sem local",
-    recurrence: apiTransaction.recorrencia?.toLowerCase() || "ocasional" as any,
+    recurrence: (apiTransaction.recorrencia?.toLowerCase() || "ocasional") as "diario" | "semanal" | "mensal" | "ocasional",
   };
 }
 
 export const TransactionsPageIntegrated = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<TransactionFiltersType>({});
   const itemsPerPage = 10;
 
   // Fetch transactions from API
@@ -58,12 +68,28 @@ export const TransactionsPageIntegrated = () => {
   const adaptedTransactions = transactions.map(transaction => adaptTransaction(transaction, locais));
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
 
-  const handleAddTransaction = async (transaction: Omit<any, "id">) => {
+  const handleAddTransaction = async (transaction: Omit<{
+    id: string;
+    date: string;
+    description: string;
+    value: number;
+    type: "entrada" | "saida";
+    category: string;
+    location: string;
+    recurrence: "diario" | "semanal" | "mensal" | "ocasional";
+    painel_id?: number;
+    tipo_divisao?: "PESSOAL" | "COMPARTILHADO_50_50" | "COMPARTILHADO_CUSTOM";
+    valor_por_pessoa?: number | null;
+    porcentagem_divisao?: number | null;
+    data_vencimento?: string | null;
+    status_pagamento?: "PENDENTE" | "PAGO" | "VENCIDO";
+    parcelas?: number | null;
+  }, "id">) => {
     let localId: number | undefined;
     
     if (transaction.location && transaction.location !== 'Não informado') {
       // First, try to find existing local
-      const existingLocal = locais.find((l: any) => {
+      const existingLocal = locais.find((l: Local) => {
         const localName = l.nome_fantasia || l.id.toString();
         return localName === transaction.location;
       });
@@ -93,8 +119,15 @@ export const TransactionsPageIntegrated = () => {
       valor: transaction.value,
       tipo: transaction.type.toUpperCase() as "ENTRADA" | "SAIDA",
       categoria: transaction.category,
-      recorrencia: transaction.recurrence?.toUpperCase() as any,
+      recorrencia: transaction.recurrence?.toUpperCase() as "DIARIO" | "SEMANAL" | "MENSAL" | "OCASIONAL",
       local_id: localId,
+      painel_id: transaction.painel_id || 1, // Default to 1 if not provided (should be required by modal)
+      tipo_divisao: transaction.tipo_divisao,
+      valor_por_pessoa: transaction.valor_por_pessoa || undefined,
+      porcentagem_divisao: transaction.porcentagem_divisao || undefined,
+      data_vencimento: transaction.data_vencimento || undefined,
+      status_pagamento: transaction.status_pagamento,
+      parcelas: transaction.parcelas || undefined,
     };
 
     try {
@@ -106,10 +139,18 @@ export const TransactionsPageIntegrated = () => {
     }
   };
 
-  const handleFilter = (filtered: any[]) => {
+  const handleFilter = (filtered: {
+    tipo?: string;
+    categoria?: string;
+    descricao?: string;
+    location?: string;
+    painel_id?: number;
+    mes?: string;
+    local_search?: string;
+  }) => {
     // Update filters state to trigger API refetch
     setCurrentPage(1);
-    setFilters(filtered);
+    setFilters(filtered as TransactionFiltersType);
     // TODO: Implement filter logic with API
   };
 
@@ -156,7 +197,7 @@ export const TransactionsPageIntegrated = () => {
         {/* Filtros */}
         <TransactionFilters
           transactions={adaptedTransactions}
-          onFilter={(filtered: { tipo?: string; categoria?: string; descricao?: string; location?: string; }) => handleFilter(filtered as any[])}
+          onFilter={handleFilter}
         />
 
         {/* Tabela */}
@@ -188,7 +229,7 @@ export const TransactionsPageIntegrated = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleAddTransaction}
-        existingLocations={Array.from(new Set(locais.map((l: any) => l.nome_fantasia || l.id.toString())))}
+        existingLocations={Array.from(new Set(locais.map((l: Local) => l.nome_fantasia || l.id.toString())))}
       />
     </div>
   );
