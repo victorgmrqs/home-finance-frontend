@@ -87,13 +87,24 @@ export const LocalModal = ({ isOpen, onClose, local }: LocalModalProps) => {
 
     if (!validate()) return;
 
-    // Remove empty fields
+    // Remove empty fields and build data object with validated keys
     const data: LocalUpdateInput = {};
-    Object.entries(formData).forEach(([key, value]) => {
-      if (value.trim()) {
-        data[key as keyof LocalUpdateInput] = value.trim();
-      }
-    });
+    
+    if (formData.nome_fantasia.trim()) {
+      data.nome_fantasia = formData.nome_fantasia.trim();
+    }
+    if (formData.cnpj.trim()) {
+      data.cnpj = formData.cnpj.trim();
+    }
+    if (formData.razao_social.trim()) {
+      data.razao_social = formData.razao_social.trim();
+    }
+    if (formData.categoria.trim()) {
+      data.categoria = formData.categoria.trim();
+    }
+    if (formData.endereco.trim()) {
+      data.endereco = formData.endereco.trim();
+    }
 
     try {
       if (isEditMode) {

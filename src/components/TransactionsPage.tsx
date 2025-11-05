@@ -103,12 +103,12 @@ export const TransactionsPage = () => {
 
     // Filtro por tipo
     if (filterParams.tipo && filterParams.tipo !== "todos") {
-      filtered = filtered.filter(t => t.type === filterParams.tipo.toLowerCase());
+      filtered = filtered.filter(t => t.type.toLowerCase() === filterParams.tipo!.toLowerCase());
     }
 
     // Filtro por categoria
     if (filterParams.categoria && filterParams.categoria !== "todos") {
-      filtered = filtered.filter(t => t.category === filterParams.categoria);
+      filtered = filtered.filter(t => t.category.toLowerCase() === filterParams.categoria!.toLowerCase());
     }
 
     // Filtro por descrição

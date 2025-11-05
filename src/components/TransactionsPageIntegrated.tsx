@@ -15,6 +15,7 @@ import { useLocais, useCreateLocal } from "@/hooks/useLocais";
 import type { TransactionCreateInput, Transaction, TransactionFilters as TransactionFiltersType } from "@/types/transaction";
 import type { Local } from "@/types/local";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Transaction as FrontendTransaction } from "./TransactionsPage";
 
 // Adapter to convert backend format to frontend format
 function adaptTransaction(apiTransaction: Transaction, locais: Local[] = []): {
@@ -68,23 +69,7 @@ export const TransactionsPageIntegrated = () => {
   const adaptedTransactions = transactions.map(transaction => adaptTransaction(transaction, locais));
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
 
-  const handleAddTransaction = async (transaction: Omit<{
-    id: string;
-    date: string;
-    description: string;
-    value: number;
-    type: "entrada" | "saida";
-    category: string;
-    location: string;
-    recurrence: "diario" | "semanal" | "mensal" | "ocasional";
-    painel_id?: number;
-    tipo_divisao?: "PESSOAL" | "COMPARTILHADO_50_50" | "COMPARTILHADO_CUSTOM";
-    valor_por_pessoa?: number | null;
-    porcentagem_divisao?: number | null;
-    data_vencimento?: string | null;
-    status_pagamento?: "PENDENTE" | "PAGO" | "VENCIDO";
-    parcelas?: number | null;
-  }, "id">) => {
+  const handleAddTransaction = async (transaction: Omit<FrontendTransaction, "id">) => {
     let localId: number | undefined;
     
     if (transaction.location && transaction.location !== 'Não informado') {
