@@ -8,11 +8,13 @@ interface LocaisFiltersProps {
   onFilter: (filters: { nome?: string }) => void;
 }
 
+type LocaisFilterParams = { nome?: string };
+
 export const LocaisFilters = ({ locais, onFilter }: LocaisFiltersProps) => {
   const [searchFilter, setSearchFilter] = useState<string>("");
 
   useEffect(() => {
-    const filters: any = {};
+    const filters: LocaisFilterParams = {};
 
     if (searchFilter) {
       filters.nome = searchFilter;

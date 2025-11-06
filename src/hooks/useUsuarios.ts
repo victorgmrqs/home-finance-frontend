@@ -38,10 +38,11 @@ export function useCreateUsuario() {
         description: 'Usuário criado com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar usuário.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao criar usuário.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -62,10 +63,11 @@ export function useUpdateUsuario() {
         description: 'Usuário atualizado com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar usuário.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao atualizar usuário.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -85,10 +87,11 @@ export function useDeleteUsuario() {
         description: 'Usuário removido com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao remover usuário.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao remover usuário.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },

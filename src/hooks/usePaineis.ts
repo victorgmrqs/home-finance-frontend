@@ -48,10 +48,11 @@ export function useCreatePainel() {
         description: 'Painel criado com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar painel.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao criar painel.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -72,10 +73,11 @@ export function useUpdatePainel() {
         description: 'Painel atualizado com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar painel.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao atualizar painel.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -95,10 +97,11 @@ export function useDeletePainel() {
         description: 'Painel removido com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao remover painel.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao remover painel.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },

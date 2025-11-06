@@ -10,17 +10,19 @@ import { Navigation } from "./Navigation";
 import type { Local } from "@/types/local";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type LocaisFilterParams = { nome?: string };
+
 export const LocaisPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocal, setEditingLocal] = useState<Local | null>(null);
   const [deletingLocal, setDeletingLocal] = useState<Local | null>(null);
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<LocaisFilterParams>({});
 
   // Fetch locais with filters
   const { data: locais = [], isLoading, error } = useLocais(filters);
   const deleteLocal = useDeleteLocal();
 
-  const handleFilter = useCallback((newFilters: any) => {
+  const handleFilter = useCallback((newFilters: LocaisFilterParams) => {
     setFilters(newFilters);
   }, []);
 

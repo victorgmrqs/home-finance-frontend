@@ -21,6 +21,16 @@ interface TransactionFiltersProps {
   }) => void;
 }
 
+type TransactionFilterParams = {
+  tipo?: string;
+  categoria?: string;
+  descricao?: string;
+  location?: string;
+  painel_id?: number;
+  mes?: string;
+  local_search?: string;
+};
+
 export const TransactionFilters = ({ transactions, onFilter }: TransactionFiltersProps) => {
   const { data: paineis = [] } = usePaineis();
   const { data: categorias = [] } = useCategorias();
@@ -32,7 +42,7 @@ export const TransactionFilters = ({ transactions, onFilter }: TransactionFilter
   const [mesFilter, setMesFilter] = useState<string>("");
 
   useEffect(() => {
-    const filters: any = {};
+    const filters: TransactionFilterParams = {};
 
     // Filtro por tipo
     if (typeFilter !== "todos") {

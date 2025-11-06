@@ -59,8 +59,8 @@ export function useCreateCategoria() {
         description: 'Categoria criada com sucesso.',
       });
     },
-    onError: (error: any) => {
-      const errorMessage = error.message || 'Erro ao criar categoria.';
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar categoria.';
 
       toast({
         title: 'Erro',
@@ -91,8 +91,8 @@ export function useUpdateCategoria() {
         description: 'Categoria atualizada com sucesso.',
       });
     },
-    onError: (error: any) => {
-      const errorMessage = error.message || 'Erro ao atualizar categoria.';
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar categoria.';
 
       toast({
         title: 'Erro',
@@ -123,8 +123,8 @@ export function useDeleteCategoria() {
         description: 'Categoria removida com sucesso.',
       });
     },
-    onError: (error: any) => {
-      const errorMessage = error.message || 'Erro ao remover categoria.';
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao remover categoria.';
 
       // Mensagens específicas para erros comuns
       let description = errorMessage;

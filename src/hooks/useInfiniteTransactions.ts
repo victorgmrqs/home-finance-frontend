@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTransactions } from './useTransactions';
+import type { Transaction, TransactionFilters } from '@/types/transaction';
 
 interface UseInfiniteTransactionsOptions {
   itemsPerPage?: number;
-  filters?: any;
+  filters?: TransactionFilters;
 }
 
 interface UseInfiniteTransactionsReturn {
-  transactions: any[];
+  transactions: Transaction[];
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -28,7 +29,7 @@ export function useInfiniteTransactions({
   // Track accumulated pages with filters key to reset when filters change
   const filtersKey = JSON.stringify(filters);
   const prevFiltersKey = useRef(filtersKey);
-  const [accumulatedPages, setAccumulatedPages] = useState<Map<number, any[]>>(new Map());
+  const [accumulatedPages, setAccumulatedPages] = useState<Map<number, Transaction[]>>(new Map());
 
   // Enable if we have painel_id OR showAllPaineis flag
   const hasValidFilters = !!filters?.painel_id;

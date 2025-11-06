@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const QUERY_KEY = 'locais';
 
-export function useLocais(params?: { limit?: number; offset?: number }) {
+export function useLocais(params?: { limit?: number; offset?: number; nome?: string }) {
   return useQuery({
     queryKey: [QUERY_KEY, params],
     queryFn: () => api.locais.list(params),
@@ -38,10 +38,11 @@ export function useCreateLocal() {
         description: 'Local criado com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao criar local.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao criar local.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -62,10 +63,11 @@ export function useUpdateLocal() {
         description: 'Local atualizado com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar local.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao atualizar local.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -85,10 +87,11 @@ export function useDeleteLocal() {
         description: 'Local removido com sucesso.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao remover local.';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao remover local.',
+        description: errorMessage,
         variant: 'destructive',
       });
     },
