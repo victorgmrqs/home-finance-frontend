@@ -7,11 +7,10 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
-      const response = await api.auth.login({
+      return await api.auth.login({
         email: data.email,
         password: data.password,
       });
-      return response;
     },
     onSuccess: (data) => {
       if (data?.user) {

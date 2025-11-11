@@ -5,7 +5,7 @@ import { api } from '@/services/api';
 interface UserContextValue {
   currentUser: Usuario | null;
   login: (user: Usuario) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 

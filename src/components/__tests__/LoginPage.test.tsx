@@ -90,4 +90,33 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('Senha')).toBeInTheDocument()
     expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
   })
+
+  it('should handle login error and show error toast', async () => {
+    const user = userEvent.setup()
+    
+    // Mock mutate to call onError callback
+    mockMutate.mockImplementation((data, options) => {
+      if (options && options.onError) {
+        options.onError(new Error('Credenciais inválidas'))
+      }
+    })
+    
+    renderWithProviders(<LoginPage />)
+
+    const emailInput = screen.getByLabelText('Email')
+    const passwordInput = screen.getByLabelText('Senha')
+    const loginButton = screen.getByRole('button', { name: /entrar/i })
+
+    await user.type(emailInput, 'joao@example.com')
+    await user.type(passwordInput, 'wrongpassword')
+    await user.click(loginButton)
+
+    // Ensure mutation was called with wrong credentials
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        { email: 'joao@example.com', password: 'wrongpassword' },
+        expect.any(Object)
+      )
+    })
+  })
 })
