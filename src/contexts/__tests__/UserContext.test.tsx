@@ -3,6 +3,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { UserProvider, useUser } from '@/contexts/UserContext'
 import type { Usuario } from '@/types/usuario'
+import { api } from '@/services/api'
+
+// Mock api.auth.logout
+vi.mock('@/services/api', () => ({
+  api: {
+    auth: {
+      logout: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+}))
 
 // Mock localStorage
 const localStorageMock = {
@@ -20,12 +30,16 @@ Object.defineProperty(window, 'localStorage', {
 const TestComponent = () => {
   const { currentUser, login, logout, isLoading } = useUser()
 
+  const handleLogout = async () => {
+    await logout()
+  }
+
   return (
     <div>
       <div data-testid="user">{currentUser ? currentUser.nome : 'No user'}</div>
       <div data-testid="loading">{isLoading ? 'Loading' : 'Not loading'}</div>
       <button onClick={() => login(mockUser)}>Login</button>
-      <button onClick={logout}>Logout</button>
+      <button onClick={handleLogout}>Logout</button>
     </div>
   )
 }
@@ -45,6 +59,8 @@ describe('UserContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorageMock.getItem.mockReturnValue(null)
+    // Reset mock do api.auth.logout
+    vi.mocked(api.auth.logout).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -114,7 +130,9 @@ describe('UserContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
 
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
+    await waitFor(() => {
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
+    })
   })
 
   it('should handle login with null user', async () => {
@@ -204,6 +222,36 @@ describe('UserContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
+  })
+
+  it('should handle backend logout errors gracefully', async () => {
+    const user = userEvent.setup()
+    localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser))
+    // Reset removeItem to work normally (not throw error)
+    localStorageMock.removeItem.mockImplementation(() => {})
+    
+    // Mock logout to throw an error
+    vi.mocked(api.auth.logout).mockRejectedValue(new Error('Backend logout failed'))
+
+    render(
+      <UserProvider>
+        <TestComponent />
+      </UserProvider>
+    )
+
+    const logoutButton = screen.getByText('Logout')
+    await user.click(logoutButton)
+
+    // Should still logout user and clear localStorage even if backend logout fails
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('No user')
+    })
+
+    // Verify both localStorage items were removed
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
+    // Verify api.auth.logout was called even though it failed
+    expect(api.auth.logout).toHaveBeenCalled()
   })
 
   it('should handle invalid JSON in localStorage', () => {

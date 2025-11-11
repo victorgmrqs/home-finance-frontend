@@ -38,6 +38,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   try {
     const response = await fetch(url, {
       ...options,
+      credentials: 'include', // Suportar cookies HttpOnly
       headers: {
         'Content-Type': 'application/json',
         ...authHeaders,
@@ -386,6 +387,95 @@ export const api = {
       return fetchApi<void>(`/categorias/${id}`, {
         method: 'DELETE',
       });
+    },
+  },
+
+  // Auth
+  auth: {
+    /**
+     * Login com email e senha
+     * Retorna usuário e token JWT
+     */
+    login: async (data: { email: string; password: string }) => {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Para suportar cookies HttpOnly
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(
+          response.status,
+          errorData.code || 'LOGIN_ERROR',
+          errorData.message || 'Erro ao fazer login'
+        );
+      }
+
+      const result: ApiResponse<{ user: Usuario; token?: string }> = await response.json();
+      
+      // Se token vier no response (fallback para quando não usar cookies)
+      if (result.data.token) {
+        localStorage.setItem('auth_token', result.data.token);
+      }
+      
+      return result.data;
+    },
+
+    /**
+     * Registro de novo usuário
+     */
+    register: async (data: { email: string; password: string; name: string }) => {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Para suportar cookies HttpOnly
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          nome: data.name,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(
+          response.status,
+          errorData.code || 'REGISTER_ERROR',
+          errorData.message || 'Erro ao registrar usuário'
+        );
+      }
+
+      const result: ApiResponse<{ user: Usuario; token?: string }> = await response.json();
+      
+      // Se token vier no response (fallback para quando não usar cookies)
+      if (result.data.token) {
+        localStorage.setItem('auth_token', result.data.token);
+      }
+      
+      return result.data;
+    },
+
+    /**
+     * Logout
+     */
+    logout: async () => {
+      try {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.error('Erro ao fazer logout:', error);
+      } finally {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('currentUser');
+      }
     },
   },
 

@@ -23,6 +23,7 @@ describe('LoginPage', () => {
 
     expect(screen.getByText('Home Finance')).toBeInTheDocument()
     expect(screen.getByLabelText('Email')).toBeInTheDocument()
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
   })
 
@@ -37,19 +38,35 @@ describe('LoginPage', () => {
     expect(mockMutate).not.toHaveBeenCalled()
   })
 
-  it('should call login mutation with email', async () => {
+  it('should not call mutation with empty password', async () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginPage />)
 
     const emailInput = screen.getByLabelText('Email')
     const loginButton = screen.getByRole('button', { name: /entrar/i })
 
+    await user.type(emailInput, 'test@example.com')
+    await user.click(loginButton)
+
+    // Should not call mutate when password is empty
+    expect(mockMutate).not.toHaveBeenCalled()
+  })
+
+  it('should call login mutation with email and password', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<LoginPage />)
+
+    const emailInput = screen.getByLabelText('Email')
+    const passwordInput = screen.getByLabelText('Senha')
+    const loginButton = screen.getByRole('button', { name: /entrar/i })
+
     await user.type(emailInput, 'joao@example.com')
+    await user.type(passwordInput, 'password123')
     await user.click(loginButton)
 
     await waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(
-        { email: 'joao@example.com' },
+        { email: 'joao@example.com', password: 'password123' },
         expect.any(Object)
       )
     })
@@ -67,13 +84,39 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: /entrando/i })).toBeDisabled()
   })
 
-  it('should fill email when clicking test user', async () => {
-    const user = userEvent.setup()
+  it('should render password field', () => {
     renderWithProviders(<LoginPage />)
 
-    const testUser = screen.getByText('João Silva (joao@example.com)')
-    await user.click(testUser)
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
+  })
 
-    expect(screen.getByLabelText('Email')).toHaveValue('joao@example.com')
+  it('should handle login error and show error toast', async () => {
+    const user = userEvent.setup()
+    
+    // Mock mutate to call onError callback
+    mockMutate.mockImplementation((data, options) => {
+      if (options && options.onError) {
+        options.onError(new Error('Credenciais inválidas'))
+      }
+    })
+    
+    renderWithProviders(<LoginPage />)
+
+    const emailInput = screen.getByLabelText('Email')
+    const passwordInput = screen.getByLabelText('Senha')
+    const loginButton = screen.getByRole('button', { name: /entrar/i })
+
+    await user.type(emailInput, 'joao@example.com')
+    await user.type(passwordInput, 'wrongpassword')
+    await user.click(loginButton)
+
+    // Ensure mutation was called with wrong credentials
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        { email: 'joao@example.com', password: 'wrongpassword' },
+        expect.any(Object)
+      )
+    })
   })
 })

@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { Usuario } from '@/types/usuario';
+import { api } from '@/services/api';
 
 interface UserContextValue {
   currentUser: Usuario | null;
   login: (user: Usuario) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -41,12 +42,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     setCurrentUser(null);
     try {
-      localStorage.removeItem('currentUser');
+      // Chamar logout no backend para limpar cookies HttpOnly
+      await api.auth.logout();
     } catch (error) {
-      console.error('Erro ao remover usuário do localStorage:', error);
+      console.error('Erro ao fazer logout no backend:', error);
+      // Continuar mesmo se o logout do backend falhar
+    }
+    try {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('auth_token');
+    } catch (error) {
+      console.error('Erro ao remover dados do localStorage:', error);
     }
   };
 
