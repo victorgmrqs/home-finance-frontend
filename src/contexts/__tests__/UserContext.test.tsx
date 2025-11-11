@@ -3,6 +3,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { UserProvider, useUser } from '@/contexts/UserContext'
 import type { Usuario } from '@/types/usuario'
+import { api } from '@/services/api'
+
+// Mock api.auth.logout
+vi.mock('@/services/api', () => ({
+  api: {
+    auth: {
+      logout: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+}))
 
 // Mock localStorage
 const localStorageMock = {
@@ -45,6 +55,8 @@ describe('UserContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorageMock.getItem.mockReturnValue(null)
+    // Reset mock do api.auth.logout
+    vi.mocked(api.auth.logout).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -114,7 +126,9 @@ describe('UserContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
 
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
+    await waitFor(() => {
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
+    })
   })
 
   it('should handle login with null user', async () => {
