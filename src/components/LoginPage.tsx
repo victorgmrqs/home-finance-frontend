@@ -10,6 +10,7 @@ import { useLogin } from '@/hooks/useLogin';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const { mutate: login, isPending } = useLogin();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -26,11 +27,20 @@ export const LoginPage = () => {
       return;
     }
 
-    login({ email }, {
+    if (!password) {
+      toast({
+        title: 'Erro',
+        description: 'Por favor, insira uma senha',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    login({ email, password }, {
       onSuccess: (data) => {
         toast({
           title: 'Sucesso!',
-          description: `Bem-vindo, ${data.nome}!`,
+          description: `Bem-vindo, ${data.user.nome}!`,
         });
         navigate('/dashboard');
       },
@@ -50,7 +60,7 @@ export const LoginPage = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-center">Home Finance</CardTitle>
           <CardDescription className="text-center">
-            Entre com seu email para acessar o sistema
+            Entre com seu email e senha para acessar o sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -67,25 +77,23 @@ export const LoginPage = () => {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Digite sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isPending}
+                required
+              />
+            </div>
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Usuários de teste:</p>
-            <ul className="mt-2 space-y-1">
-              <li className="cursor-pointer hover:text-foreground" onClick={() => setEmail('joao@example.com')}>
-                João Silva (joao@example.com)
-              </li>
-              <li className="cursor-pointer hover:text-foreground" onClick={() => setEmail('maria@example.com')}>
-                Maria Silva (maria@example.com)
-              </li>
-              <li className="cursor-pointer hover:text-foreground" onClick={() => setEmail('carlos@example.com')}>
-                Carlos Souza (carlos@example.com)
-              </li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -30,6 +30,7 @@ describe('LoginPage', () => {
 
     expect(screen.getByText('Entrar')).toBeInTheDocument()
     expect(screen.getByLabelText('Email')).toBeInTheDocument()
+    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
   })
 
@@ -49,13 +50,18 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />)
 
     const emailInput = screen.getByLabelText('Email')
+    const passwordInput = screen.getByLabelText('Senha')
     const submitButton = screen.getByRole('button', { name: 'Entrar' })
 
     await user.type(emailInput, 'test@example.com')
+    await user.type(passwordInput, 'password123')
     await user.click(submitButton)
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith({ email: 'test@example.com' }, expect.any(Object))
+      expect(mockMutate).toHaveBeenCalledWith(
+        { email: 'test@example.com', password: 'password123' },
+        expect.any(Object)
+      )
     })
   })
 

@@ -6,13 +6,16 @@ export function useLogin() {
   const { login } = useUser();
 
   return useMutation({
-    mutationFn: async (data: { email: string }) => {
-      const response = await api.usuarios.getByEmail(data.email);
+    mutationFn: async (data: { email: string; password: string }) => {
+      const response = await api.auth.login({
+        email: data.email,
+        password: data.password,
+      });
       return response;
     },
     onSuccess: (data) => {
-      if (data) {
-        login(data);
+      if (data?.user) {
+        login(data.user);
       }
     },
   });
