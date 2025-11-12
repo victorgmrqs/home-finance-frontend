@@ -9,7 +9,7 @@ import type { Local } from '@/types/local';
 import type { Usuario } from '@/types/usuario';
 import type { Painel, PainelUsuario } from '@/types/painel';
 import type { Categoria } from '@/types/categoria';
-import { apiCircuitBreaker } from './circuitBreaker';
+import { apiCircuitBreaker, type CircuitBreakerStats } from './circuitBreaker';
 import { apiCache } from './apiCache';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -64,7 +64,14 @@ async function fetchApi<T>(
         );
       }
 
-      const result: ApiResponse<T> = await response.json();
+      let result: ApiResponse<T>;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        // JSON parsing errors should not use cache fallback
+        // They indicate malformed response, not network issues
+        throw new Error(`JSON parsing error: ${jsonError instanceof Error ? jsonError.message : 'Unknown error'}`);
+      }
 
       // Cache successful GET requests
       if (shouldUseCache) {
@@ -74,8 +81,10 @@ async function fetchApi<T>(
       return result.data;
     });
   } catch (error) {
-    // If circuit is open or network error, try to use cached data as fallback
-    if (shouldUseCache) {
+    // Only use cache fallback for network errors or circuit breaker, not for JSON parsing errors
+    const isJsonParsingError = error instanceof Error && error.message.includes('JSON parsing error');
+    
+    if (!isJsonParsingError && shouldUseCache) {
       const cachedData = apiCache.getStale<T>(cacheKey);
       if (cachedData) {
         console.warn(`Using stale cache for ${endpoint} due to circuit breaker or network error`);
@@ -501,7 +510,7 @@ export const api = {
   circuitBreaker: {
     getStats: () => apiCircuitBreaker.getStats(),
     reset: () => apiCircuitBreaker.reset(),
-    subscribe: (listener: (stats: any) => void) => apiCircuitBreaker.subscribe(listener),
+    subscribe: (listener: (stats: CircuitBreakerStats) => void) => apiCircuitBreaker.subscribe(listener),
     isOpen: () => apiCircuitBreaker.isOpen(),
   },
 

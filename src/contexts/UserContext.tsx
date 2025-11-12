@@ -53,7 +53,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       localStorage.removeItem('currentUser');
-      localStorage.removeItem('auth_token');
+      // Cookie HttpOnly será removido pelo backend
     } catch (error) {
       console.error('Erro ao remover dados do localStorage:', error);
     }

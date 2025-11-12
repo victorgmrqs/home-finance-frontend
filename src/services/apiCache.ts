@@ -10,7 +10,7 @@ interface CacheEntry<T> {
 }
 
 class ApiCache {
-  private cache: Map<string, CacheEntry<any>> = new Map();
+  private cache: Map<string, CacheEntry<unknown>> = new Map();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
   /**
@@ -106,7 +106,7 @@ class ApiCache {
   /**
    * Generate cache key from endpoint and params
    */
-  generateKey(endpoint: string, params?: Record<string, any>): string {
+  generateKey(endpoint: string, params?: Record<string, unknown>): string {
     if (!params) {
       return endpoint;
     }

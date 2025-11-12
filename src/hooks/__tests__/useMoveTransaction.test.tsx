@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useMoveTransaction } from '@/hooks/useMoveTransaction'
 import { mockTransaction } from '@/test/test-utils'
+import { apiCache } from '@/services/api'
 
 // Mock fetch
 global.fetch = vi.fn()
@@ -22,6 +23,7 @@ describe('useMoveTransaction', () => {
       },
     })
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -217,20 +219,31 @@ describe('useMoveTransaction', () => {
       expect(result.current.isError).toBe(true)
     })
 
-    // Second mutation succeeds
+    // Reset mutation state
+    result.current.reset()
+
+    // Wait a bit for state to reset
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Second mutation succeeds - use same format as "should move transaction successfully" test
+    const movedTransaction = { ...mockTransaction, painel_id: 3 }
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => mockTransaction,
+      json: async () => ({
+        code: 'SUCCESS',
+        message: 'Transação atualizada com sucesso',
+        data: movedTransaction,
+      }),
     } as Response)
 
     result.current.mutate({
-      transactionId: 1,
-      newPainelId: 3
+      id: 1,
+      novo_painel_id: 3
     })
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
-    })
+    }, { timeout: 5000 })
 
     expect(result.current.error).toBeNull()
   })

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { api, ApiError } from '@/services/api'
+import { api, ApiError, apiCache } from '@/services/api'
 import { mockApiResponse, mockTransaction, mockLocal } from '../../test/test-utils'
 
 // Mock fetch globally
@@ -9,10 +9,12 @@ global.fetch = mockFetch
 describe('API Service', () => {
   beforeEach(() => {
     mockFetch.mockClear()
+    apiCache.clear() // Clear cache before each test
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+    apiCache.clear() // Clear cache after each test
   })
 
   describe('Transactions API', () => {
