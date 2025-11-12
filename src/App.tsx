@@ -12,6 +12,7 @@ import { LocaisPage } from "./components/LocaisPage";
 import { UsuariosPage } from "./components/UsuariosPage";
 import { PaineisPage } from "./components/PaineisPage";
 import { CategoriasPage } from "./components/CategoriasPage";
+import { ApiStatusBanner } from "./components/ApiStatusBanner";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <UserProvider>
       <TooltipProvider>
+        <ApiStatusBanner />
         <Toaster />
         <Sonner />
         <BrowserRouter>

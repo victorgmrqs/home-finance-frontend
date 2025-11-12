@@ -1,6 +1,7 @@
 /**
  * API Service
  * Centralized service for making HTTP requests to the backend
+ * Includes Circuit Breaker pattern for resilience
  */
 
 import type { Transaction } from '@/types/transaction';
@@ -8,6 +9,8 @@ import type { Local } from '@/types/local';
 import type { Usuario } from '@/types/usuario';
 import type { Painel, PainelUsuario } from '@/types/painel';
 import type { Categoria } from '@/types/categoria';
+import { apiCircuitBreaker } from './circuitBreaker';
+import { apiCache } from './apiCache';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -24,48 +27,62 @@ class ApiError extends Error {
   }
 }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit,
+  cacheOptions?: { useCache?: boolean; cacheTTL?: number }
+): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const cacheKey = apiCache.generateKey(endpoint);
+  const shouldUseCache = cacheOptions?.useCache !== false && options?.method !== 'POST' && options?.method !== 'PUT' && options?.method !== 'DELETE';
 
-  // Pegar token de autenticação
-  const token = localStorage.getItem('auth_token');
-  const authHeaders: Record<string, string> = {};
-
-  if (token) {
-    authHeaders['Authorization'] = `Bearer ${token}`;
-  }
-
+  // Try to use circuit breaker
   try {
-    const response = await fetch(url, {
-      ...options,
-      credentials: 'include', // Suportar cookies HttpOnly
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeaders,
-        ...options?.headers,
-      },
-    });
+    return await apiCircuitBreaker.execute(async () => {
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'include', // Suportar cookies HttpOnly
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
 
-      // Se erro 401, limpar auth e redirecionar para login
-      if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('currentUser');
-        window.location.href = '/login';
+        // Se erro 401, limpar auth e redirecionar para login
+        if (response.status === 401) {
+          localStorage.removeItem('currentUser');
+          window.location.href = '/login';
+        }
+
+        throw new ApiError(
+          response.status,
+          errorData.code || 'UNKNOWN_ERROR',
+          errorData.message || `HTTP Error ${response.status}`
+        );
       }
 
-      throw new ApiError(
-        response.status,
-        errorData.code || 'UNKNOWN_ERROR',
-        errorData.message || `HTTP Error ${response.status}`
-      );
+      const result: ApiResponse<T> = await response.json();
+
+      // Cache successful GET requests
+      if (shouldUseCache) {
+        apiCache.set(cacheKey, result.data, cacheOptions?.cacheTTL);
+      }
+
+      return result.data;
+    });
+  } catch (error) {
+    // If circuit is open or network error, try to use cached data as fallback
+    if (shouldUseCache) {
+      const cachedData = apiCache.getStale<T>(cacheKey);
+      if (cachedData) {
+        console.warn(`Using stale cache for ${endpoint} due to circuit breaker or network error`);
+        return cachedData;
+      }
     }
 
-    const result: ApiResponse<T> = await response.json();
-    return result.data;
-  } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
@@ -417,10 +434,8 @@ export const api = {
 
       const result: ApiResponse<{ user: Usuario; token?: string }> = await response.json();
       
-      // Se token vier no response (fallback para quando não usar cookies)
-      if (result.data.token) {
-        localStorage.setItem('auth_token', result.data.token);
-      }
+      // Token agora é gerenciado via HttpOnly cookies pelo backend
+      // Não precisamos mais armazenar em localStorage
       
       return result.data;
     },
@@ -453,10 +468,8 @@ export const api = {
 
       const result: ApiResponse<{ user: Usuario; token?: string }> = await response.json();
       
-      // Se token vier no response (fallback para quando não usar cookies)
-      if (result.data.token) {
-        localStorage.setItem('auth_token', result.data.token);
-      }
+      // Token agora é gerenciado via HttpOnly cookies pelo backend
+      // Não precisamos mais armazenar em localStorage
       
       return result.data;
     },
@@ -473,7 +486,7 @@ export const api = {
       } catch (error) {
         console.error('Erro ao fazer logout:', error);
       } finally {
-        localStorage.removeItem('auth_token');
+        // Cookie HttpOnly será removido pelo backend
         localStorage.removeItem('currentUser');
       }
     },
@@ -481,9 +494,23 @@ export const api = {
 
   // Health check
   health: async () => {
-    return fetchApi<{ status: string; timestamp: string }>('/health');
+    return fetchApi<{ status: string; timestamp: string }>('/health', undefined, { useCache: false });
+  },
+
+  // Circuit breaker utilities
+  circuitBreaker: {
+    getStats: () => apiCircuitBreaker.getStats(),
+    reset: () => apiCircuitBreaker.reset(),
+    subscribe: (listener: (stats: any) => void) => apiCircuitBreaker.subscribe(listener),
+    isOpen: () => apiCircuitBreaker.isOpen(),
+  },
+
+  // Cache utilities
+  cache: {
+    clear: () => apiCache.clear(),
+    getStats: () => apiCache.getStats(),
   },
 };
 
-export { ApiError };
+export { ApiError, apiCircuitBreaker, apiCache };
 export type { ApiResponse };
