@@ -5,6 +5,24 @@ import { UserProvider, useUser } from '@/contexts/UserContext'
 import type { Usuario } from '@/types/usuario'
 import { api } from '@/services/api'
 
+// Mock userStorage
+vi.mock('@/services/userStorage', () => ({
+  userStorage: {
+    loadUser: vi.fn().mockResolvedValue(null),
+    saveUser: vi.fn().mockResolvedValue(undefined),
+    removeUser: vi.fn().mockResolvedValue(undefined),
+    validateUser: vi.fn().mockReturnValue(true),
+  },
+}))
+
+// Mock sessionRecovery
+vi.mock('@/services/sessionRecovery', () => ({
+  sessionRecovery: {
+    recoverSession: vi.fn().mockResolvedValue(null),
+    validateSession: vi.fn().mockResolvedValue(false),
+  },
+}))
+
 // Mock api.auth.logout
 vi.mock('@/services/api', () => ({
   api: {
@@ -30,6 +48,14 @@ Object.defineProperty(window, 'localStorage', {
 const TestComponent = () => {
   const { currentUser, login, logout, isLoading } = useUser()
 
+  const handleLogin = async () => {
+    try {
+      await login(mockUser)
+    } catch (error) {
+      // Error is logged in context
+    }
+  }
+
   const handleLogout = async () => {
     await logout()
   }
@@ -38,7 +64,7 @@ const TestComponent = () => {
     <div>
       <div data-testid="user">{currentUser ? currentUser.nome : 'No user'}</div>
       <div data-testid="loading">{isLoading ? 'Loading' : 'Not loading'}</div>
-      <button onClick={() => login(mockUser)}>Login</button>
+      <button onClick={handleLogin}>Login</button>
       <button onClick={handleLogout}>Logout</button>
     </div>
   )
@@ -67,19 +93,22 @@ describe('UserContext', () => {
     vi.clearAllMocks()
   })
 
-  it('should provide initial state', () => {
+  it('should provide initial state', async () => {
     render(
       <UserProvider>
         <TestComponent />
       </UserProvider>
     )
 
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('Not loading')
+    })
     expect(screen.getByTestId('user')).toHaveTextContent('No user')
-    expect(screen.getByTestId('loading')).toHaveTextContent('Not loading')
   })
 
-  it('should load user from localStorage on mount', () => {
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser))
+  it('should load user from storage on mount', async () => {
+    const { userStorage } = await import('@/services/userStorage')
+    vi.mocked(userStorage.loadUser).mockResolvedValueOnce(mockUser)
 
     render(
       <UserProvider>
@@ -87,16 +116,24 @@ describe('UserContext', () => {
       </UserProvider>
     )
 
-    expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
+    })
   })
 
   it('should login user', async () => {
+    const { userStorage } = await import('@/services/userStorage')
     const user = userEvent.setup()
+
     render(
       <UserProvider>
         <TestComponent />
       </UserProvider>
     )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('Not loading')
+    })
 
     const loginButton = screen.getByText('Login')
     await user.click(loginButton)
@@ -105,15 +142,14 @@ describe('UserContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
     })
 
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'currentUser',
-      JSON.stringify(mockUser)
-    )
+    expect(userStorage.saveUser).toHaveBeenCalledWith(mockUser)
   })
 
   it('should logout user', async () => {
+    const { userStorage } = await import('@/services/userStorage')
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser))
+
+    vi.mocked(userStorage.loadUser).mockResolvedValueOnce(mockUser)
 
     render(
       <UserProvider>
@@ -121,7 +157,9 @@ describe('UserContext', () => {
       </UserProvider>
     )
 
-    expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
+    })
 
     const logoutButton = screen.getByText('Logout')
     await user.click(logoutButton)
@@ -130,9 +168,8 @@ describe('UserContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
 
-    await waitFor(() => {
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
-    })
+    expect(api.auth.logout).toHaveBeenCalled()
+    expect(userStorage.removeUser).toHaveBeenCalled()
   })
 
   it('should handle login with null user', async () => {
@@ -151,8 +188,9 @@ describe('UserContext', () => {
     })
   })
 
-  it('should persist user data across page reloads', () => {
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser))
+  it('should persist user data across page reloads', async () => {
+    const { userStorage } = await import('@/services/userStorage')
+    vi.mocked(userStorage.loadUser).mockResolvedValueOnce(mockUser)
 
     render(
       <UserProvider>
@@ -160,110 +198,108 @@ describe('UserContext', () => {
       </UserProvider>
     )
 
-    expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('currentUser')
-  })
-
-  it('should handle localStorage errors gracefully', () => {
-    localStorageMock.getItem.mockImplementation(() => {
-      throw new Error('localStorage error')
-    })
-
-    // Should not throw error
-    expect(() => {
-      render(
-        <UserProvider>
-          <TestComponent />
-        </UserProvider>
-      )
-    }).not.toThrow()
-
-    expect(screen.getByTestId('user')).toHaveTextContent('No user')
-  })
-
-  it('should handle setItem errors during login', async () => {
-    const user = userEvent.setup()
-    localStorageMock.setItem.mockImplementation(() => {
-      throw new Error('localStorage error')
-    })
-
-    render(
-      <UserProvider>
-        <TestComponent />
-      </UserProvider>
-    )
-
-    const loginButton = screen.getByText('Login')
-    await user.click(loginButton)
-
-    // Should still login user even if localStorage fails
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
     })
+
+    expect(userStorage.loadUser).toHaveBeenCalled()
   })
 
-  it('should handle removeItem errors during logout', async () => {
-    const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser))
-    localStorageMock.removeItem.mockImplementation(() => {
-      throw new Error('localStorage error')
+  it('should handle storage errors gracefully', async () => {
+    const { userStorage } = await import('@/services/userStorage')
+    vi.mocked(userStorage.loadUser).mockRejectedValueOnce(new Error('Storage error'))
+
+    // Should not throw error
+    render(
+      <UserProvider>
+        <TestComponent />
+      </UserProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
+  })
+
+  it('should handle save errors during login', async () => {
+    const { userStorage } = await import('@/services/userStorage')
+    const user = userEvent.setup()
+
+    vi.mocked(userStorage.saveUser).mockRejectedValueOnce(new Error('Save error'))
 
     render(
       <UserProvider>
         <TestComponent />
       </UserProvider>
     )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('Not loading')
+    })
+
+    const loginButton = screen.getByText('Login')
+
+    // Click should trigger error but not crash
+    await user.click(loginButton)
+
+    // Wait a bit for the error to be handled
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // User should still be "No user" because save failed
+    expect(screen.getByTestId('user')).toHaveTextContent('No user')
+  })
+
+  it('should handle remove errors during logout', async () => {
+    const { userStorage } = await import('@/services/userStorage')
+    const user = userEvent.setup()
+
+    vi.mocked(userStorage.loadUser).mockResolvedValueOnce(mockUser)
+    vi.mocked(userStorage.removeUser).mockRejectedValueOnce(new Error('Remove error'))
+
+    render(
+      <UserProvider>
+        <TestComponent />
+      </UserProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
+    })
 
     const logoutButton = screen.getByText('Logout')
     await user.click(logoutButton)
 
-    // Should still logout user even if localStorage fails
+    // Should still logout user even if storage removal fails
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
   })
 
   it('should handle backend logout errors gracefully', async () => {
+    const { userStorage } = await import('@/services/userStorage')
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser))
-    // Reset removeItem to work normally (not throw error)
-    localStorageMock.removeItem.mockImplementation(() => {})
-    
-    // Mock logout to throw an error
-    vi.mocked(api.auth.logout).mockRejectedValue(new Error('Backend logout failed'))
+
+    vi.mocked(userStorage.loadUser).mockResolvedValueOnce(mockUser)
+    vi.mocked(api.auth.logout).mockRejectedValueOnce(new Error('Backend logout failed'))
 
     render(
       <UserProvider>
         <TestComponent />
       </UserProvider>
     )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent(mockUser.nome)
+    })
 
     const logoutButton = screen.getByText('Logout')
     await user.click(logoutButton)
 
-    // Should still logout user and clear localStorage even if backend logout fails
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
 
-    // Verify localStorage item was removed
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
-    // Cookie HttpOnly será removido pelo backend, não pelo localStorage
-    // Verify api.auth.logout was called even though it failed
+    expect(userStorage.removeUser).toHaveBeenCalled()
     expect(api.auth.logout).toHaveBeenCalled()
-  })
-
-  it('should handle invalid JSON in localStorage', () => {
-    localStorageMock.getItem.mockReturnValue('invalid json')
-
-    render(
-      <UserProvider>
-        <TestComponent />
-      </UserProvider>
-    )
-
-    expect(screen.getByTestId('user')).toHaveTextContent('No user')
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
   })
 })

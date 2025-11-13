@@ -12,9 +12,9 @@ export function useLogin() {
         password: data.password,
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data?.user) {
-        login(data.user);
+        await login(data.user);
       }
     },
   });

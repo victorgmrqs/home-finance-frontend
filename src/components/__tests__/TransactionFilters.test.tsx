@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
 import { TransactionFilters } from '@/components/TransactionFilters'
 import { renderWithProviders, mockApiResponses } from '@/test/test-utils'
 import { usePaineis } from '@/hooks/usePaineis'
@@ -28,7 +28,14 @@ describe('TransactionFilters', () => {
     })
   })
 
-  it('should render all filter controls', () => {
+  afterEach(async () => {
+    // Wait for any pending async operations to complete
+    await waitFor(() => {
+      // Give time for any pending state updates
+    }, { timeout: 100 })
+  })
+
+  it('should render all filter controls', async () => {
     renderWithProviders(
       <TransactionFilters
         transactions={mockTransactions}
@@ -36,7 +43,11 @@ describe('TransactionFilters', () => {
       />
     )
 
-    expect(screen.getByText('Cartão')).toBeInTheDocument()
+    // Wait for component to fully render
+    await waitFor(() => {
+      expect(screen.getByText('Cartão')).toBeInTheDocument()
+    })
+
     expect(screen.getByText('Período')).toBeInTheDocument()
     expect(screen.getByText('Categoria')).toBeInTheDocument()
     expect(screen.getByText('Descrição')).toBeInTheDocument()

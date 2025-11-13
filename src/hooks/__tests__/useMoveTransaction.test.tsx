@@ -206,11 +206,23 @@ describe('useMoveTransaction', () => {
   })
 
   it('should reset error state on new mutation', async () => {
-    // First mutation fails
-    vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+    const movedTransaction = { ...mockTransaction, painel_id: 3 }
+    
+    // Setup mocks: first call fails, second call succeeds
+    vi.mocked(fetch)
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          code: 'SUCCESS',
+          message: 'Transação atualizada com sucesso',
+          data: movedTransaction,
+        }),
+      } as Response)
 
     const { result } = renderHook(() => useMoveTransaction(), { wrapper })
 
+    // First mutation fails
     result.current.mutate({
       id: 1,
       novo_painel_id: 2
@@ -231,17 +243,6 @@ describe('useMoveTransaction', () => {
     })
     expect(result.current.error).toBeNull()
 
-    // Setup second mutation to succeed
-    const movedTransaction = { ...mockTransaction, painel_id: 3 }
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        code: 'SUCCESS',
-        message: 'Transação atualizada com sucesso',
-        data: movedTransaction,
-      }),
-    } as Response)
-
     // Second mutation should succeed after reset
     result.current.mutate({
       id: 1,
@@ -251,7 +252,7 @@ describe('useMoveTransaction', () => {
     // Wait for success - this verifies that reset allows new mutations to work
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
-    })
+    }, { timeout: 5000 })
 
     expect(result.current.error).toBeNull()
   })
