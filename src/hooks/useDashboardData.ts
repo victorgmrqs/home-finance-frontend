@@ -55,15 +55,29 @@ export function useDashboardData(filters: DashboardFilters = {}) {
   const { data: paineis = [], isLoading: paineisLoading } = usePaineis();
 
   // Buscar dados agregados do dashboard em uma única requisição
-  const { data: summaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ['dashboard', 'summary', filters],
+  const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useQuery({
+    queryKey: ['dashboard', 'summary', filters.mes, filters.usuario_id],
     queryFn: () => api.dashboard.summary(filters),
     staleTime: 30 * 1000,
   });
 
   // Enriquecer dados com informações completas dos painéis
   const dashboardData = useMemo<DashboardData>(() => {
-    if (summaryLoading || paineisLoading || !summaryData) {
+    // Retornar valores vazios em caso de erro
+    if (summaryError) {
+      return {
+        total_entradas_familia: 0,
+        total_saidas_familia: 0,
+        saldo_familia: 0,
+        gastos_por_painel: [],
+        gastos_por_usuario: [],
+        quantidade_transacoes: 0,
+        quantidade_compartilhadas: 0,
+      };
+    }
+
+    // Aguardar ambos os dados estarem carregados
+    if (paineisLoading || !summaryData) {
       return {
         total_entradas_familia: 0,
         total_saidas_familia: 0,
@@ -110,10 +124,11 @@ export function useDashboardData(filters: DashboardFilters = {}) {
       quantidade_transacoes: summaryData.quantidade_transacoes,
       quantidade_compartilhadas: summaryData.quantidade_compartilhadas,
     };
-  }, [summaryData, paineis, summaryLoading, paineisLoading]);
+  }, [summaryData, paineis, summaryError, paineisLoading]);
 
   return {
     data: dashboardData,
     isLoading: summaryLoading || paineisLoading,
+    error: summaryError,
   };
 }

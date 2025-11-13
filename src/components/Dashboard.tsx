@@ -28,7 +28,7 @@ export const Dashboard = () => {
     setMes(newMes);
   };
 
-  const { data: dashboardData, isLoading } = useDashboardData({ mes });
+  const { data: dashboardData, isLoading, error } = useDashboardData({ mes });
 
   if (isLoading || !dashboardData) {
     return (
@@ -41,6 +41,34 @@ export const Dashboard = () => {
         <main className="container mx-auto px-4 py-8">
           <Navigation />
           <Skeleton className="h-96 w-full mt-8" />
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 bg-header-bg shadow-lg">
+          <div className="container mx-auto px-4 py-4">
+            <h1 className="text-2xl font-bold text-header-text">Home Finance</h1>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8">
+          <Navigation />
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="text-red-600">Erro ao carregar dashboard</CardTitle>
+              <CardDescription>
+                Não foi possível carregar os dados do dashboard. Tente novamente mais tarde.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => window.location.reload()}>
+                Tentar Novamente
+              </Button>
+            </CardContent>
+          </Card>
         </main>
       </div>
     );

@@ -160,4 +160,31 @@ describe('useDashboardData', () => {
       expect(api.dashboard.summary).toHaveBeenCalledWith({ mes: '2024-01' })
     })
   })
+
+  it('should handle errors gracefully', async () => {
+    const mockError = new Error('API Error')
+    
+    vi.mocked(api.dashboard.summary).mockRejectedValue(mockError)
+    vi.mocked(api.paineis.list).mockResolvedValue([])
+
+    const { result } = renderHook(() => useDashboardData({ mes: '2024-01' }), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    // Deve retornar dados vazios em caso de erro
+    expect(result.current.data).toEqual({
+      total_entradas_familia: 0,
+      total_saidas_familia: 0,
+      saldo_familia: 0,
+      gastos_por_painel: [],
+      gastos_por_usuario: [],
+      quantidade_transacoes: 0,
+      quantidade_compartilhadas: 0,
+    })
+
+    // Deve expor o erro
+    expect(result.current.error).toBeDefined()
+  })
 })
