@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo, ReactNode } from 'react';
 import type { Usuario } from '@/types/usuario';
 import { api } from '@/services/api';
 import { userStorage } from '@/services/userStorage';
@@ -115,8 +115,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const contextValue = useMemo(
+    () => ({ currentUser, login, logout, isLoading, error }),
+    [currentUser, isLoading, error]
+  );
+
   return (
-    <UserContext.Provider value={{ currentUser, login, logout, isLoading, error }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );
