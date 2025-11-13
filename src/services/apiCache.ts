@@ -12,6 +12,14 @@ interface CacheEntry<T> {
 class ApiCache {
   private cache: Map<string, CacheEntry<unknown>> = new Map();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_STALE_TIME = 24 * 60 * 60 * 1000; // 24 hours - remove entries older than this
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private readonly CLEANUP_INTERVAL = 10 * 60 * 1000; // Run cleanup every 10 minutes
+
+  constructor() {
+    // Start automatic cleanup routine
+    this.startCleanupRoutine();
+  }
 
   /**
    * Set cache entry with optional TTL
@@ -82,6 +90,47 @@ class ApiCache {
   }
 
   /**
+   * Remove stale entries that are too old (older than MAX_STALE_TIME)
+   * This prevents memory growth from keeping expired entries indefinitely
+   */
+  cleanupStaleEntries(): number {
+    const now = Date.now();
+    let removedCount = 0;
+
+    for (const [key, entry] of this.cache.entries()) {
+      const age = now - entry.timestamp;
+      if (age > this.MAX_STALE_TIME) {
+        this.cache.delete(key);
+        removedCount++;
+      }
+    }
+
+    return removedCount;
+  }
+
+  /**
+   * Start automatic cleanup routine
+   */
+  private startCleanupRoutine(): void {
+    // Only start in browser environment
+    if (typeof window !== 'undefined') {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanupStaleEntries();
+      }, this.CLEANUP_INTERVAL);
+    }
+  }
+
+  /**
+   * Stop automatic cleanup routine (useful for testing or cleanup)
+   */
+  stopCleanupRoutine(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+  }
+
+  /**
    * Get cache statistics
    */
   getStats(): {
@@ -105,9 +154,10 @@ class ApiCache {
 
   /**
    * Generate cache key from endpoint and params
+   * Includes both query params and request body for proper cache isolation
    */
   generateKey(endpoint: string, params?: Record<string, unknown>): string {
-    if (!params) {
+    if (!params || Object.keys(params).length === 0) {
       return endpoint;
     }
     const sortedParams = Object.keys(params)

@@ -5,6 +5,13 @@
 
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
+export class CircuitBreakerOpenError extends Error {
+  constructor(message: string = 'Circuit breaker is OPEN - API is currently unavailable') {
+    super(message);
+    this.name = 'CircuitBreakerOpenError';
+  }
+}
+
 export interface CircuitBreakerConfig {
   failureThreshold: number; // Number of failures before opening circuit
   successThreshold: number; // Number of successes needed to close circuit from half-open
@@ -51,7 +58,7 @@ class CircuitBreaker {
         this.successes = 0;
         this.notifyListeners();
       } else {
-        throw new Error('Circuit breaker is OPEN');
+        throw new CircuitBreakerOpenError();
       }
     }
 

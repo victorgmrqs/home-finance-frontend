@@ -9,7 +9,7 @@ import type { Local } from '@/types/local';
 import type { Usuario } from '@/types/usuario';
 import type { Painel, PainelUsuario } from '@/types/painel';
 import type { Categoria } from '@/types/categoria';
-import { apiCircuitBreaker, type CircuitBreakerStats } from './circuitBreaker';
+import { apiCircuitBreaker, CircuitBreakerOpenError, type CircuitBreakerStats } from './circuitBreaker';
 import { apiCache } from './apiCache';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -27,13 +27,49 @@ class ApiError extends Error {
   }
 }
 
+class JsonParsingError extends Error {
+  constructor(message: string, public originalError?: Error) {
+    super(message);
+    this.name = 'JsonParsingError';
+  }
+}
+
 async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit,
   cacheOptions?: { useCache?: boolean; cacheTTL?: number }
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  const cacheKey = apiCache.generateKey(endpoint);
+  
+  // Generate cache key including query params and body for proper cache isolation
+  const cacheParams: Record<string, unknown> = {};
+  
+  // Extract query params from endpoint
+  const [path, queryString] = endpoint.split('?');
+  if (queryString) {
+    const params = new URLSearchParams(queryString);
+    params.forEach((value, key) => {
+      cacheParams[key] = value;
+    });
+  }
+  
+  // Include request body for cache key (for non-GET requests that might be cached)
+  if (options?.body && typeof options.body === 'string') {
+    try {
+      const bodyData = JSON.parse(options.body);
+      cacheParams['__body__'] = bodyData;
+    } catch {
+      // If body is not JSON, use it as is
+      cacheParams['__body__'] = options.body;
+    }
+  }
+  
+  // Include HTTP method in cache key
+  if (options?.method) {
+    cacheParams['__method__'] = options.method;
+  }
+  
+  const cacheKey = apiCache.generateKey(path, Object.keys(cacheParams).length > 0 ? cacheParams : undefined);
   const shouldUseCache = cacheOptions?.useCache !== false && options?.method !== 'POST' && options?.method !== 'PUT' && options?.method !== 'DELETE';
 
   // Try to use circuit breaker
@@ -53,8 +89,12 @@ async function fetchApi<T>(
 
         // Se erro 401, limpar auth e redirecionar para login
         if (response.status === 401) {
-          localStorage.removeItem('currentUser');
-          window.location.href = '/login';
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('currentUser');
+          }
+          if (typeof window !== 'undefined' && window.location) {
+            window.location.href = '/login';
+          }
         }
 
         throw new ApiError(
@@ -70,7 +110,10 @@ async function fetchApi<T>(
       } catch (jsonError) {
         // JSON parsing errors should not use cache fallback
         // They indicate malformed response, not network issues
-        throw new Error(`JSON parsing error: ${jsonError instanceof Error ? jsonError.message : 'Unknown error'}`);
+        throw new JsonParsingError(
+          'Failed to parse JSON response from API',
+          jsonError instanceof Error ? jsonError : undefined
+        );
       }
 
       // Cache successful GET requests
@@ -82,7 +125,8 @@ async function fetchApi<T>(
     });
   } catch (error) {
     // Only use cache fallback for network errors or circuit breaker, not for JSON parsing errors
-    const isJsonParsingError = error instanceof Error && error.message.includes('JSON parsing error');
+    const isJsonParsingError = error instanceof JsonParsingError;
+    const isCircuitBreakerError = error instanceof CircuitBreakerOpenError;
     
     if (!isJsonParsingError && shouldUseCache) {
       const cachedData = apiCache.getStale<T>(cacheKey);
@@ -92,9 +136,16 @@ async function fetchApi<T>(
       }
     }
 
-    if (error instanceof ApiError) {
+    // Re-throw specific errors as-is
+    if (error instanceof ApiError || error instanceof JsonParsingError) {
       throw error;
     }
+    
+    // Convert circuit breaker errors to custom error class
+    if (isCircuitBreakerError) {
+      throw new CircuitBreakerOpenError();
+    }
+    
     throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -521,5 +572,5 @@ export const api = {
   },
 };
 
-export { ApiError, apiCircuitBreaker, apiCache };
+export { ApiError, JsonParsingError, CircuitBreakerOpenError, apiCircuitBreaker, apiCache };
 export type { ApiResponse };
