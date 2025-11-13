@@ -44,7 +44,7 @@ const isValid = userStorage.validateUser(userData)
 
 Valida campos obrigatórios:
 - `id`: número válido (> 0)
-- `nome`: string não-vazia
+- `nome`: string não vazia
 - `email`: opcional, mas se presente deve ser string
 
 ### 2. Session Recovery Service (`src/services/sessionRecovery.ts`)

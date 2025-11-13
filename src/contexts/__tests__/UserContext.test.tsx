@@ -46,7 +46,7 @@ Object.defineProperty(window, 'localStorage', {
 
 // Test component that uses the UserContext
 const TestComponent = () => {
-  const { currentUser, login, logout, isLoading } = useUser()
+  const { currentUser, login, logout, isLoading, error } = useUser()
 
   const handleLogin = async () => {
     try {
@@ -64,6 +64,7 @@ const TestComponent = () => {
     <div>
       <div data-testid="user">{currentUser ? currentUser.nome : 'No user'}</div>
       <div data-testid="loading">{isLoading ? 'Loading' : 'Not loading'}</div>
+      <div data-testid="error">{error ? error.message : 'No error'}</div>
       <button onClick={handleLogin}>Login</button>
       <button onClick={handleLogout}>Logout</button>
     </div>
@@ -242,8 +243,10 @@ describe('UserContext', () => {
     // Click should trigger error but not crash
     await user.click(loginButton)
 
-    // Wait a bit for the error to be handled
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(screen.getByTestId('error')).toHaveTextContent('Save error')
+    })
 
     // User should still be "No user" because save failed
     expect(screen.getByTestId('user')).toHaveTextContent('No user')
@@ -273,6 +276,8 @@ describe('UserContext', () => {
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
+
+    // Note: logout does not set error state - it logs to console but continues gracefully
   })
 
   it('should handle backend logout errors gracefully', async () => {

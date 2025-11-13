@@ -164,4 +164,92 @@ describe('userStorage', () => {
       localStorage.getItem = originalGetItem;
     });
   });
+
+  describe('IndexedDB fallback and recovery', () => {
+    // Note: These tests verify behavior when IndexedDB is not available (Node.js environment)
+    // In a browser environment with IndexedDB, the fallback mechanism would work as designed
+
+    it('should handle IndexedDB absence gracefully during save', async () => {
+      // In Node.js (test environment), IndexedDB is not available
+      // The service should still save to localStorage without throwing
+      await expect(userStorage.saveUser(mockUser)).resolves.not.toThrow();
+
+      // Verify localStorage save succeeded
+      const stored = localStorage.getItem('currentUser');
+      expect(stored).not.toBeNull();
+      expect(JSON.parse(stored!)).toEqual(mockUser);
+    });
+
+    it('should handle IndexedDB absence gracefully during load', async () => {
+      // Save to localStorage
+      await userStorage.saveUser(mockUser);
+
+      // Should load from localStorage when IndexedDB is not available
+      const loaded = await userStorage.loadUser();
+      expect(loaded).toEqual(mockUser);
+    });
+
+    it('should handle corrupted localStorage gracefully', async () => {
+      // Simulate localStorage corruption
+      localStorage.setItem('currentUser', 'corrupted data');
+
+      // Should clean up and return null (IndexedDB not available in test env)
+      const loaded = await userStorage.loadUser();
+      expect(loaded).toBeNull();
+
+      // Should have cleaned up invalid data
+      expect(localStorage.getItem('currentUser')).toBeNull();
+    });
+
+    it('should save to localStorage when IndexedDB is unavailable', async () => {
+      // This is the default behavior in Node.js test environment
+      await userStorage.saveUser(mockUser);
+
+      const stored = localStorage.getItem('currentUser');
+      expect(stored).not.toBeNull();
+      
+      const loaded = await userStorage.loadUser();
+      expect(loaded).toEqual(mockUser);
+    });
+  });
+
+  describe('IndexedDB error handling in Node.js environment', () => {
+    // These tests verify that the service handles the absence of IndexedDB gracefully
+    // which is the case in Node.js test environments
+
+    it('should not throw when IndexedDB is unavailable during save', async () => {
+      // IndexedDB is not defined in Node.js, but service should handle it
+      await expect(userStorage.saveUser(mockUser)).resolves.not.toThrow();
+    });
+
+    it('should not throw when IndexedDB is unavailable during load', async () => {
+      // Should return null without throwing when only IndexedDB would have data
+      // but it's not available
+      const loaded = await userStorage.loadUser();
+      expect(loaded).toBeNull();
+    });
+
+    it('should not throw when IndexedDB is unavailable during remove', async () => {
+      // Should complete without throwing
+      await expect(userStorage.removeUser()).resolves.not.toThrow();
+    });
+
+    it('should handle the full lifecycle without IndexedDB', async () => {
+      // Save
+      await userStorage.saveUser(mockUser);
+      expect(localStorage.getItem('currentUser')).not.toBeNull();
+
+      // Load
+      let loaded = await userStorage.loadUser();
+      expect(loaded).toEqual(mockUser);
+
+      // Remove
+      await userStorage.removeUser();
+      expect(localStorage.getItem('currentUser')).toBeNull();
+
+      // Load after remove
+      loaded = await userStorage.loadUser();
+      expect(loaded).toBeNull();
+    });
+  });
 });

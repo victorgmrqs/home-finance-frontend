@@ -30,6 +30,7 @@ export class UserErrorBoundary extends Component<Props, State> {
     return {
       hasError: true,
       error,
+      errorCount: 0, // Reset errorCount after recovery or retry
     };
   }
 

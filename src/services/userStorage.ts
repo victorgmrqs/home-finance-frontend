@@ -47,10 +47,8 @@ function validateUser(data: unknown): data is Usuario {
   }
 
   // Email is optional but if present must be valid
-  if (data.email !== undefined && data.email !== null) {
-    if (typeof data.email !== 'string') {
-      return false;
-    }
+  if (data.email !== undefined && data.email !== null && typeof data.email !== 'string') {
+    return false;
   }
 
   return true;
@@ -79,8 +77,9 @@ export const userStorage = {
     }
 
     // Backup to IndexedDB
+    let db: IDBDatabase | undefined;
     try {
-      const db = await openDB();
+      db = await openDB();
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       await new Promise<void>((resolve, reject) => {
@@ -88,9 +87,12 @@ export const userStorage = {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
-      db.close();
     } catch (error) {
       console.warn('Failed to save to IndexedDB:', error);
+    } finally {
+      if (db) {
+        db.close();
+      }
     }
   },
 
@@ -120,8 +122,9 @@ export const userStorage = {
     }
 
     // Fallback to IndexedDB
+    let db: IDBDatabase | undefined;
     try {
-      const db = await openDB();
+      db = await openDB();
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
 
@@ -130,8 +133,6 @@ export const userStorage = {
         request.onsuccess = () => resolve(request.result || null);
         request.onerror = () => reject(request.error);
       });
-
-      db.close();
 
       if (userData) {
         const parsed = JSON.parse(userData);
@@ -147,6 +148,10 @@ export const userStorage = {
       }
     } catch (error) {
       console.warn('Failed to load from IndexedDB:', error);
+    } finally {
+      if (db) {
+        db.close();
+      }
     }
 
     return null;
@@ -164,8 +169,9 @@ export const userStorage = {
     }
 
     // Remove from IndexedDB
+    let db: IDBDatabase | undefined;
     try {
-      const db = await openDB();
+      db = await openDB();
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       await new Promise<void>((resolve, reject) => {
@@ -173,9 +179,12 @@ export const userStorage = {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
-      db.close();
     } catch (error) {
       console.warn('Failed to remove from IndexedDB:', error);
+    } finally {
+      if (db) {
+        db.close();
+      }
     }
   },
 
