@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePaineis, useCreatePainel, useUpdatePainel, useDeletePainel } from '@/hooks/usePaineis'
 import { mockApiResponses, mockFetch, mockFetchError } from '@/test/test-utils'
+import { apiCache } from '@/services/api'
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -22,6 +23,7 @@ const createWrapper = () => {
 describe('usePaineis', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should fetch paineis successfully', async () => {
@@ -82,6 +84,7 @@ describe('usePaineis', () => {
 describe('useCreatePainel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should create painel successfully', async () => {
@@ -186,6 +189,7 @@ describe('useCreatePainel', () => {
 describe('useUpdatePainel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should update painel successfully', async () => {
@@ -242,6 +246,7 @@ describe('useUpdatePainel', () => {
 describe('useDeletePainel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should delete painel successfully', async () => {

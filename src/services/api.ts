@@ -1,6 +1,7 @@
 /**
  * API Service
  * Centralized service for making HTTP requests to the backend
+ * Includes Circuit Breaker pattern for resilience
  */
 
 import type { Transaction } from '@/types/transaction';
@@ -8,6 +9,8 @@ import type { Local } from '@/types/local';
 import type { Usuario } from '@/types/usuario';
 import type { Painel, PainelUsuario } from '@/types/painel';
 import type { Categoria } from '@/types/categoria';
+import { apiCircuitBreaker, CircuitBreakerOpenError, type CircuitBreakerStats } from './circuitBreaker';
+import { apiCache } from './apiCache';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -24,51 +27,125 @@ class ApiError extends Error {
   }
 }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
-
-  // Pegar token de autenticação
-  const token = localStorage.getItem('auth_token');
-  const authHeaders: Record<string, string> = {};
-
-  if (token) {
-    authHeaders['Authorization'] = `Bearer ${token}`;
+class JsonParsingError extends Error {
+  constructor(message: string, public originalError?: Error) {
+    super(message);
+    this.name = 'JsonParsingError';
   }
+}
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      credentials: 'include', // Suportar cookies HttpOnly
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeaders,
-        ...options?.headers,
-      },
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit,
+  cacheOptions?: { useCache?: boolean; cacheTTL?: number }
+): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Generate cache key including query params and body for proper cache isolation
+  const cacheParams: Record<string, unknown> = {};
+  
+  // Extract query params from endpoint
+  const [path, queryString] = endpoint.split('?');
+  if (queryString) {
+    const params = new URLSearchParams(queryString);
+    params.forEach((value, key) => {
+      cacheParams[key] = value;
     });
+  }
+  
+  // Include request body for cache key (for non-GET requests that might be cached)
+  if (options?.body && typeof options.body === 'string') {
+    try {
+      const bodyData = JSON.parse(options.body);
+      cacheParams['__body__'] = bodyData;
+    } catch {
+      // If body is not JSON, use it as is
+      cacheParams['__body__'] = options.body;
+    }
+  }
+  
+  // Include HTTP method in cache key
+  if (options?.method) {
+    cacheParams['__method__'] = options.method;
+  }
+  
+  const cacheKey = apiCache.generateKey(path, Object.keys(cacheParams).length > 0 ? cacheParams : undefined);
+  const shouldUseCache = cacheOptions?.useCache !== false && options?.method !== 'POST' && options?.method !== 'PUT' && options?.method !== 'DELETE';
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+  // Try to use circuit breaker
+  try {
+    return await apiCircuitBreaker.execute(async () => {
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'include', // Suportar cookies HttpOnly
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+      });
 
-      // Se erro 401, limpar auth e redirecionar para login
-      if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('currentUser');
-        window.location.href = '/login';
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
+        // Se erro 401, limpar auth e redirecionar para login
+        if (response.status === 401) {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('currentUser');
+          }
+          if (typeof window !== 'undefined' && window.location) {
+            window.location.href = '/login';
+          }
+        }
+
+        throw new ApiError(
+          response.status,
+          errorData.code || 'UNKNOWN_ERROR',
+          errorData.message || `HTTP Error ${response.status}`
+        );
       }
 
-      throw new ApiError(
-        response.status,
-        errorData.code || 'UNKNOWN_ERROR',
-        errorData.message || `HTTP Error ${response.status}`
-      );
+      let result: ApiResponse<T>;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        // JSON parsing errors should not use cache fallback
+        // They indicate malformed response, not network issues
+        throw new JsonParsingError(
+          'Failed to parse JSON response from API',
+          jsonError instanceof Error ? jsonError : undefined
+        );
+      }
+
+      // Cache successful GET requests
+      if (shouldUseCache) {
+        apiCache.set(cacheKey, result.data, cacheOptions?.cacheTTL);
+      }
+
+      return result.data;
+    });
+  } catch (error) {
+    // Only use cache fallback for network errors or circuit breaker, not for JSON parsing errors
+    const isJsonParsingError = error instanceof JsonParsingError;
+    const isCircuitBreakerError = error instanceof CircuitBreakerOpenError;
+    
+    if (!isJsonParsingError && shouldUseCache) {
+      const cachedData = apiCache.getStale<T>(cacheKey);
+      if (cachedData) {
+        console.warn(`Using stale cache for ${endpoint} due to circuit breaker or network error`);
+        return cachedData;
+      }
     }
 
-    const result: ApiResponse<T> = await response.json();
-    return result.data;
-  } catch (error) {
-    if (error instanceof ApiError) {
+    // Re-throw specific errors as-is
+    if (error instanceof ApiError || error instanceof JsonParsingError) {
       throw error;
     }
+    
+    // Convert circuit breaker errors to custom error class
+    if (isCircuitBreakerError) {
+      throw new CircuitBreakerOpenError();
+    }
+    
     throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -417,10 +494,8 @@ export const api = {
 
       const result: ApiResponse<{ user: Usuario; token?: string }> = await response.json();
       
-      // Se token vier no response (fallback para quando não usar cookies)
-      if (result.data.token) {
-        localStorage.setItem('auth_token', result.data.token);
-      }
+      // Token agora é gerenciado via HttpOnly cookies pelo backend
+      // Não precisamos mais armazenar em localStorage
       
       return result.data;
     },
@@ -453,10 +528,8 @@ export const api = {
 
       const result: ApiResponse<{ user: Usuario; token?: string }> = await response.json();
       
-      // Se token vier no response (fallback para quando não usar cookies)
-      if (result.data.token) {
-        localStorage.setItem('auth_token', result.data.token);
-      }
+      // Token agora é gerenciado via HttpOnly cookies pelo backend
+      // Não precisamos mais armazenar em localStorage
       
       return result.data;
     },
@@ -473,7 +546,7 @@ export const api = {
       } catch (error) {
         console.error('Erro ao fazer logout:', error);
       } finally {
-        localStorage.removeItem('auth_token');
+        // Cookie HttpOnly será removido pelo backend
         localStorage.removeItem('currentUser');
       }
     },
@@ -481,9 +554,23 @@ export const api = {
 
   // Health check
   health: async () => {
-    return fetchApi<{ status: string; timestamp: string }>('/health');
+    return fetchApi<{ status: string; timestamp: string }>('/health', undefined, { useCache: false });
+  },
+
+  // Circuit breaker utilities
+  circuitBreaker: {
+    getStats: () => apiCircuitBreaker.getStats(),
+    reset: () => apiCircuitBreaker.reset(),
+    subscribe: (listener: (stats: CircuitBreakerStats) => void) => apiCircuitBreaker.subscribe(listener),
+    isOpen: () => apiCircuitBreaker.isOpen(),
+  },
+
+  // Cache utilities
+  cache: {
+    clear: () => apiCache.clear(),
+    getStats: () => apiCache.getStats(),
   },
 };
 
-export { ApiError };
+export { ApiError, JsonParsingError, CircuitBreakerOpenError, apiCircuitBreaker, apiCache };
 export type { ApiResponse };

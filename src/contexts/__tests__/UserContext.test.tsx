@@ -247,9 +247,9 @@ describe('UserContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('No user')
     })
 
-    // Verify both localStorage items were removed
+    // Verify localStorage item was removed
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('currentUser')
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
+    // Cookie HttpOnly será removido pelo backend, não pelo localStorage
     // Verify api.auth.logout was called even though it failed
     expect(api.auth.logout).toHaveBeenCalled()
   })

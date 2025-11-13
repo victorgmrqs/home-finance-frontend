@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useLocais, useCreateLocal, useUpdateLocal, useDeleteLocal } from '@/hooks/useLocais'
 import { mockApiResponses, mockFetch, mockFetchError } from '@/test/test-utils'
+import { apiCache } from '@/services/api'
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -22,6 +23,7 @@ const createWrapper = () => {
 describe('useLocais', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should fetch locais successfully', async () => {
@@ -82,6 +84,7 @@ describe('useLocais', () => {
 describe('useCreateLocal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should create local successfully', async () => {
@@ -189,6 +192,7 @@ describe('useCreateLocal', () => {
 describe('useUpdateLocal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should update local successfully', async () => {
@@ -245,6 +249,7 @@ describe('useUpdateLocal', () => {
 describe('useDeleteLocal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiCache.clear()
   })
 
   it('should delete local successfully', async () => {
