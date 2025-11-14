@@ -1,14 +1,13 @@
 /**
  * useDashboardData Hook
  * Hook for aggregating financial data across all cards/panels
+ * Uses aggregated endpoint to eliminate N+1 query pattern
  */
 
 import { useMemo } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { usePaineis } from './usePaineis';
-import { useUsuarios } from './useUsuarios';
-import type { Transaction } from '@/types/transaction';
 import type { Painel } from '@/types/painel';
 
 interface DashboardFilters {
@@ -52,33 +51,20 @@ interface DashboardData {
 }
 
 export function useDashboardData(filters: DashboardFilters = {}) {
-  // Buscar painéis e usuários primeiro
+  // Buscar painéis para enriquecer os dados
   const { data: paineis = [], isLoading: paineisLoading } = usePaineis();
-  const { data: usuarios = [], isLoading: usuariosLoading } = useUsuarios();
 
-  // Para cada painel, buscar suas transações em paralelo
-  // (O backend exige painel_id obrigatório, então fazemos múltiplas requisições)
-  const transactionQueries = useQueries({
-    queries: paineis.map(painel => ({
-      queryKey: ['transactions', { painel_id: painel.id, mes: filters.mes }],
-      queryFn: () => api.transactions.list({
-        painel_id: painel.id,
-        mes: filters.mes,
-      }),
-      enabled: !!painel.id && !paineisLoading,
-      staleTime: 30 * 1000,
-    })),
+  // Buscar dados agregados do dashboard em uma única requisição
+  const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useQuery({
+    queryKey: ['dashboard', 'summary', filters.mes, filters.usuario_id],
+    queryFn: () => api.dashboard.summary(filters),
+    staleTime: 30 * 1000,
   });
 
-  // Combinar todas as transações de todos os painéis
-  const allTransactions = useMemo(() => {
-    return transactionQueries.flatMap(query => (query.data || []) as Transaction[]);
-  }, [transactionQueries]);
-
-  const transactionsLoading = transactionQueries.some(query => query.isLoading) || paineisLoading;
-
+  // Enriquecer dados com informações completas dos painéis
   const dashboardData = useMemo<DashboardData>(() => {
-    if (transactionsLoading || paineisLoading || usuariosLoading) {
+    // Retornar valores vazios em caso de erro
+    if (summaryError) {
       return {
         total_entradas_familia: 0,
         total_saidas_familia: 0,
@@ -90,110 +76,59 @@ export function useDashboardData(filters: DashboardFilters = {}) {
       };
     }
 
-    // Calcular totais gerais da família
-    let total_entradas_familia = 0;
-    let total_saidas_familia = 0;
-    let quantidade_compartilhadas = 0;
+    // Aguardar ambos os dados estarem carregados
+    if (paineisLoading || !summaryData) {
+      return {
+        total_entradas_familia: 0,
+        total_saidas_familia: 0,
+        saldo_familia: 0,
+        gastos_por_painel: [],
+        gastos_por_usuario: [],
+        quantidade_transacoes: 0,
+        quantidade_compartilhadas: 0,
+      };
+    }
 
-    allTransactions.forEach((t: Transaction) => {
-      if (t.tipo === 'ENTRADA') {
-        total_entradas_familia += t.valor;
-      } else {
-        total_saidas_familia += t.valor;
-        if (t.tipo_divisao && t.tipo_divisao !== 'PESSOAL') {
-          quantidade_compartilhadas++;
-        }
-      }
-    });
+    // Enriquecer gastos_por_painel com objetos Painel completos
+    const gastos_por_painel: GastoPorPainel[] = summaryData.gastos_por_painel.map(gasto => {
+      const painel = paineis.find(p => p.id === gasto.painel_id);
 
-    const saldo_familia = total_entradas_familia - total_saidas_familia;
-
-    // Calcular gastos por painel
-    const gastos_por_painel: GastoPorPainel[] = paineis.map(painel => {
-      const transacoesDoPainel = allTransactions.filter(t => t.painel_id === painel.id);
-
-      let total_entradas = 0;
-      let total_saidas = 0;
-      let total_pessoal = 0;
-      let total_compartilhado = 0;
-      let valor_a_pagar = 0;
-
-      transacoesDoPainel.forEach(t => {
-        if (t.tipo === 'ENTRADA') {
-          total_entradas += t.valor;
-        } else {
-          total_saidas += t.valor;
-
-          // Calcular valor a pagar considerando divisão
-          if (t.tipo_divisao === 'PESSOAL' || !t.tipo_divisao) {
-            total_pessoal += t.valor;
-            valor_a_pagar += t.valor;
-          } else {
-            total_compartilhado += t.valor;
-            // Usar valor_por_pessoa se disponível, senão calcular
-            valor_a_pagar += t.valor_por_pessoa || t.valor / 2;
-          }
-        }
-      });
+      // Se não encontrar o painel, criar um objeto mínimo
+      const painelData: Painel = painel || {
+        id: gasto.painel_id,
+        nome: gasto.painel_nome,
+        descricao: gasto.painel_descricao,
+        tipo_conta: gasto.painel_tipo_conta as 'CARTAO_CREDITO' | 'CONTA_BANCARIA' | 'DINHEIRO',
+        usuario_id: gasto.painel_usuario_id,
+        created_at: '',
+        updated_at: '',
+      };
 
       return {
-        painel,
-        total_entradas,
-        total_saidas,
-        saldo: total_entradas - total_saidas,
-        total_pessoal,
-        total_compartilhado,
-        valor_a_pagar,
+        painel: painelData,
+        total_entradas: gasto.total_entradas,
+        total_saidas: gasto.total_saidas,
+        saldo: gasto.saldo,
+        total_pessoal: gasto.total_pessoal,
+        total_compartilhado: gasto.total_compartilhado,
+        valor_a_pagar: gasto.valor_a_pagar,
       };
     });
 
-    // Calcular gastos por usuário
-    const gastos_por_usuario_map = new Map<number, GastoPorUsuario>();
-
-    usuarios.forEach(usuario => {
-      gastos_por_usuario_map.set(usuario.id, {
-        usuario_id: usuario.id,
-        usuario_nome: usuario.nome,
-        total_gasto_pessoal: 0,
-        total_gasto_compartilhado: 0,
-        total_a_pagar: 0,
-      });
-    });
-
-    // Iterar pelas transações e calcular por usuário
-    allTransactions.forEach((t: Transaction) => {
-      if (t.tipo === 'SAIDA') {
-        const painel = paineis.find(p => p.id === t.painel_id);
-        if (painel && painel.usuario_id) {
-          const userData = gastos_por_usuario_map.get(painel.usuario_id);
-          if (userData) {
-            if (t.tipo_divisao === 'PESSOAL' || !t.tipo_divisao) {
-              userData.total_gasto_pessoal += t.valor;
-              userData.total_a_pagar += t.valor;
-            } else {
-              userData.total_gasto_compartilhado += t.valor;
-              userData.total_a_pagar += t.valor_por_pessoa || t.valor / 2;
-            }
-          }
-        }
-      }
-    });
-
-    const gastos_por_usuario = Array.from(gastos_por_usuario_map.values());
-
     return {
-      total_entradas_familia,
-      total_saidas_familia,
-      saldo_familia,
+      total_entradas_familia: summaryData.total_entradas_familia,
+      total_saidas_familia: summaryData.total_saidas_familia,
+      saldo_familia: summaryData.saldo_familia,
       gastos_por_painel,
-      gastos_por_usuario,
-      quantidade_transacoes: allTransactions.length,
-      quantidade_compartilhadas,
+      gastos_por_usuario: summaryData.gastos_por_usuario,
+      quantidade_transacoes: summaryData.quantidade_transacoes,
+      quantidade_compartilhadas: summaryData.quantidade_compartilhadas,
     };
-  }, [allTransactions, paineis, usuarios, transactionsLoading, paineisLoading, usuariosLoading]);
+  }, [summaryData, paineis, summaryError, paineisLoading]);
 
   return {
     data: dashboardData,
-    isLoading: transactionsLoading || paineisLoading || usuariosLoading,
+    isLoading: summaryLoading || paineisLoading,
+    error: summaryError,
   };
 }

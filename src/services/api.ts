@@ -552,6 +552,48 @@ export const api = {
     },
   },
 
+  // Dashboard
+  dashboard: {
+    /**
+     * Busca dados agregados do dashboard
+     * Elimina padrão N+1 queries retornando todos os dados em uma única requisição
+     */
+    summary: async (params?: { mes?: string; usuario_id?: number }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.mes) queryParams.append('mes', params.mes);
+      if (params?.usuario_id) queryParams.append('usuario_id', params.usuario_id.toString());
+
+      const query = queryParams.toString();
+      return fetchApi<{
+        total_entradas_familia: number;
+        total_saidas_familia: number;
+        saldo_familia: number;
+        gastos_por_painel: Array<{
+          painel_id: number;
+          painel_nome: string;
+          painel_descricao?: string;
+          painel_tipo_conta: string;
+          painel_usuario_id: number;
+          total_entradas: number;
+          total_saidas: number;
+          saldo: number;
+          total_pessoal: number;
+          total_compartilhado: number;
+          valor_a_pagar: number;
+        }>;
+        gastos_por_usuario: Array<{
+          usuario_id: number;
+          usuario_nome: string;
+          total_gasto_pessoal: number;
+          total_gasto_compartilhado: number;
+          total_a_pagar: number;
+        }>;
+        quantidade_transacoes: number;
+        quantidade_compartilhadas: number;
+      }>(`/dashboard/summary${query ? `?${query}` : ''}`);
+    },
+  },
+
   // Health check
   health: async () => {
     return fetchApi<{ status: string; timestamp: string }>('/health', undefined, { useCache: false });
