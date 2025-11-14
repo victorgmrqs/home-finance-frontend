@@ -1,33 +1,13 @@
 /**
  * User Storage Service
  * Provides fallback storage mechanisms for user data with IndexedDB backup
+ * Using unified storage abstraction
  */
 
 import type { Usuario } from '@/types/usuario';
+import { storage } from './storage';
 
-const DB_NAME = 'home-finance-db';
-const DB_VERSION = 1;
-const STORE_NAME = 'user';
 const USER_KEY = 'currentUser';
-
-/**
- * Initialize IndexedDB
- */
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-  });
-}
 
 /**
  * Validate user data integrity
@@ -55,11 +35,11 @@ function validateUser(data: unknown): data is Usuario {
 }
 
 /**
- * User Storage Service with fallback mechanisms
+ * User Storage Service with unified storage abstraction
  */
 export const userStorage = {
   /**
-   * Save user to localStorage with IndexedDB backup
+   * Save user using unified storage abstraction
    */
   async saveUser(user: Usuario): Promise<void> {
     // Validate before saving
@@ -67,125 +47,60 @@ export const userStorage = {
       throw new Error('Invalid user data');
     }
 
-    const userData = JSON.stringify(user);
-
-    // Try localStorage first
     try {
-      localStorage.setItem(USER_KEY, userData);
+      await storage.setItem(USER_KEY, user);
     } catch (error) {
-      console.warn('Failed to save to localStorage:', error);
-    }
-
-    // Backup to IndexedDB
-    let db: IDBDatabase | undefined;
-    try {
-      db = await openDB();
-      const transaction = db.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      await new Promise<void>((resolve, reject) => {
-        const request = store.put(userData, USER_KEY);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    } catch (error) {
-      console.warn('Failed to save to IndexedDB:', error);
-    } finally {
-      if (db) {
-        db.close();
-      }
+      console.error('Failed to save user:', error);
+      throw error;
     }
   },
 
   /**
-   * Load user with fallback chain: localStorage → IndexedDB → null
+   * Load user with automatic fallback
    */
   async loadUser(): Promise<Usuario | null> {
-    // Try localStorage first
     try {
-      const stored = localStorage.getItem(USER_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (validateUser(parsed)) {
-          return parsed;
-        }
-        console.warn('Invalid user data in localStorage, removing...');
-        localStorage.removeItem(USER_KEY);
+      const user = await storage.getItem<Usuario>(USER_KEY);
+
+      if (user && validateUser(user)) {
+        return user;
       }
+
+      if (user) {
+        console.warn('Invalid user data in storage, removing...');
+        await storage.removeItem(USER_KEY);
+      }
+
+      return null;
     } catch (error) {
-      console.warn('Failed to load from localStorage:', error);
-      // Try to clean up corrupted data
-      try {
-        localStorage.removeItem(USER_KEY);
-      } catch (cleanupError) {
-        console.warn('Failed to clean up localStorage:', cleanupError);
-      }
+      console.error('Failed to load user:', error);
+      return null;
     }
-
-    // Fallback to IndexedDB
-    let db: IDBDatabase | undefined;
-    try {
-      db = await openDB();
-      const transaction = db.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-
-      const userData = await new Promise<string | null>((resolve, reject) => {
-        const request = store.get(USER_KEY);
-        request.onsuccess = () => resolve(request.result || null);
-        request.onerror = () => reject(request.error);
-      });
-
-      if (userData) {
-        const parsed = JSON.parse(userData);
-        if (validateUser(parsed)) {
-          // Restore to localStorage
-          try {
-            localStorage.setItem(USER_KEY, userData);
-          } catch (error) {
-            console.warn('Failed to restore to localStorage:', error);
-          }
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load from IndexedDB:', error);
-    } finally {
-      if (db) {
-        db.close();
-      }
-    }
-
-    return null;
   },
 
   /**
-   * Remove user from all storage
+   * Remove user from storage
    */
   async removeUser(): Promise<void> {
-    // Remove from localStorage
     try {
-      localStorage.removeItem(USER_KEY);
+      await storage.removeItem(USER_KEY);
     } catch (error) {
-      console.warn('Failed to remove from localStorage:', error);
+      console.error('Failed to remove user:', error);
     }
+  },
 
-    // Remove from IndexedDB
-    let db: IDBDatabase | undefined;
-    try {
-      db = await openDB();
-      const transaction = db.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      await new Promise<void>((resolve, reject) => {
-        const request = store.delete(USER_KEY);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    } catch (error) {
-      console.warn('Failed to remove from IndexedDB:', error);
-    } finally {
-      if (db) {
-        db.close();
-      }
-    }
+  /**
+   * Get storage type being used
+   */
+  getStorageType() {
+    return storage.getCurrentType();
+  },
+
+  /**
+   * Check if using fallback storage
+   */
+  isUsingFallback() {
+    return storage.isUsingFallback();
   },
 
   /**
