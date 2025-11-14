@@ -10,6 +10,29 @@ Este documento descreve o fluxo completo de autenticação do Home Finance, incl
 
 ---
 
+## 📑 Índice
+
+1. [Diagrama de Sequência](#-diagrama-de-sequência)
+   - [Fluxo de Registro](#1-fluxo-de-registro)
+   - [Fluxo de Login](#2-fluxo-de-login)
+   - [Fluxo de Requisições Autenticadas](#3-fluxo-de-requisições-autenticadas)
+   - [Fluxo de Logout](#4-fluxo-de-logout)
+2. [Formato do Token JWT](#-formato-do-token-jwt)
+3. [Endpoints de Autenticação](#-endpoints-de-autenticação)
+   - [POST /api/v1/auth/register](#post-apiv1authregister)
+   - [POST /api/v1/auth/login](#post-apiv1authlogin)
+   - [POST /api/v1/auth/logout](#post-apiv1authlogout)
+4. [Segurança](#-segurança)
+5. [Guia de Integração para Desenvolvedores](#-guia-de-integração-para-desenvolvedores)
+6. [Exemplos de Código](#-exemplos-de-código)
+7. [Fluxo de Recuperação de Sessão](#-fluxo-de-recuperação-de-sessão)
+8. [Considerações Importantes](#️-considerações-importantes)
+9. [Roadmap: Refresh Tokens](#-roadmap-refresh-tokens)
+10. [Referências](#-referências)
+11. [Troubleshooting](#-troubleshooting)
+
+---
+
 ## 📊 Diagrama de Sequência
 
 ### 1. Fluxo de Registro
@@ -23,14 +46,17 @@ sequenceDiagram
 
     U->>F: Preenche formulário de registro
     F->>F: Valida dados localmente
-    F->>B: POST /api/v1/auth/register<br/>{email, password, nome}
+    F->>B: POST /api/v1/auth/register
+    Note right of F: {email, password, nome}
     B->>B: Valida dados
     B->>B: Hash da senha (bcrypt)
     B->>DB: Salva usuário
     DB-->>B: Usuário criado
     B->>B: Gera JWT token
     B->>B: Define cookie HttpOnly
-    B-->>F: 201 Created<br/>Set-Cookie: token=xxx<br/>{user: {...}}
+    B-->>F: 201 Created
+    Note left of B: Set-Cookie: token=xxx
+    Note left of B: {user: {...}}
     F->>F: Salva user no UserContext
     F->>F: Salva user no IndexedDB
     F->>F: Redireciona para /dashboard
@@ -54,20 +80,24 @@ sequenceDiagram
     else Sem user ou inválido
         U->>F: Preenche email e senha
         F->>F: Valida formato
-        F->>B: POST /api/v1/auth/login<br/>{email, password}
+        F->>B: POST /api/v1/auth/login
+        Note right of F: {email, password}
         B->>DB: Busca usuário por email
         DB-->>B: Usuário encontrado
         B->>B: Compara hash da senha
         alt Senha correta
             B->>B: Gera JWT token
             B->>B: Define cookie HttpOnly
-            B-->>F: 200 OK<br/>Set-Cookie: token=xxx<br/>{user: {...}}
+            B-->>F: 200 OK
+            Note left of B: Set-Cookie: token=xxx
+            Note left of B: {user: {...}}
             F->>F: Salva user no UserContext
             F->>F: Salva user no IndexedDB
             F->>F: Redireciona para /dashboard
             F-->>U: Login bem-sucedido
         else Senha incorreta
-            B-->>F: 401 Unauthorized<br/>{error: "Invalid credentials"}
+            B-->>F: 401 Unauthorized
+            Note left of B: {error: "Invalid credentials"}
             F-->>U: Exibe erro de credenciais
         end
     end
@@ -81,13 +111,15 @@ sequenceDiagram
     participant B as Backend
     participant DB as Database
 
-    F->>B: GET /api/v1/transactions<br/>Cookie: token=xxx
+    F->>B: GET /api/v1/transactions
+    Note right of F: Cookie: token=xxx
     B->>B: Valida JWT do cookie
     alt Token válido
         B->>B: Extrai user_id do token
         B->>DB: Busca dados do usuário
         DB-->>B: Dados retornados
-        B-->>F: 200 OK<br/>{data: [...]}
+        B-->>F: 200 OK
+        Note left of B: {data: [...]}
         F->>F: Exibe dados
     else Token inválido/expirado
         B-->>F: 401 Unauthorized
@@ -105,10 +137,12 @@ sequenceDiagram
     participant B as Backend
 
     U->>F: Clica em "Sair"
-    F->>B: POST /api/v1/auth/logout<br/>Cookie: token=xxx
+    F->>B: POST /api/v1/auth/logout
+    Note right of F: Cookie: token=xxx
     B->>B: Invalida token (se houver lista negra)
     B->>B: Remove cookie HttpOnly
-    B-->>F: 200 OK<br/>Set-Cookie: token=; expires=past
+    B-->>F: 200 OK
+    Note left of B: Set-Cookie: token=; expires=past
     F->>F: Remove user do UserContext
     F->>F: Remove user do IndexedDB
     F->>F: Limpa cache do React Query
@@ -189,7 +223,7 @@ Cria uma nova conta de usuário.
 
 **Headers de Response:**
 ```
-Set-Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400
+Set-Cookie: token=<jwt_token>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400
 ```
 
 **Validações:**
@@ -234,7 +268,7 @@ Autentica um usuário existente.
 
 **Headers de Response:**
 ```
-Set-Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400
+Set-Cookie: token=<jwt_token>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400
 ```
 
 **Errors:**
@@ -250,10 +284,10 @@ Encerra a sessão do usuário.
 
 **Request:**
 ```
-Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Cookie: token=<jwt_token>
 ```
 
-**Response (200 OK):**
+**Response (200 OK):
 ```json
 {
   "code": "LOGOUT_SUCCESS",
@@ -642,6 +676,175 @@ Atualmente não implementado. Futura task adicionará:
 
 ### 4. Multi-dispositivo
 Tokens são independentes por dispositivo. Logout em um dispositivo não afeta outros (por design).
+
+---
+
+## 🔄 Roadmap: Refresh Tokens
+
+### Visão Geral
+
+Atualmente, o sistema utiliza apenas **access tokens** com validade de 24 horas. Em uma futura implementação, será adicionado um sistema de **refresh tokens** para melhorar a experiência do usuário e a segurança.
+
+### Arquitetura Planejada
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant F as Frontend
+    participant B as Backend
+    participant DB as Database
+
+    Note over F,B: Login inicial
+    F->>B: POST /api/v1/auth/login
+    B->>DB: Valida credenciais
+    B->>B: Gera access token (15min)
+    B->>B: Gera refresh token (7 dias)
+    B->>DB: Armazena refresh token
+    B-->>F: 200 OK
+    Note left of B: Set-Cookie: access_token (15min)
+    Note left of B: Set-Cookie: refresh_token (7d)
+
+    Note over F,B: Access token expira após 15min
+    F->>B: GET /api/v1/transactions
+    Note right of F: Cookie: access_token (expirado)
+    B-->>F: 401 Unauthorized
+    Note left of B: {error: "Token expired"}
+
+    Note over F,B: Frontend renova automaticamente
+    F->>B: POST /api/v1/auth/refresh
+    Note right of F: Cookie: refresh_token (válido)
+    B->>DB: Valida refresh token
+    alt Refresh token válido
+        B->>B: Gera novo access token (15min)
+        B-->>F: 200 OK
+        Note left of B: Set-Cookie: access_token (novo)
+        F->>B: GET /api/v1/transactions
+        Note right of F: Cookie: access_token (novo)
+        B-->>F: 200 OK com dados
+    else Refresh token inválido
+        B-->>F: 401 Unauthorized
+        F->>F: Redireciona para /login
+    end
+```
+
+### Características do Sistema
+
+#### Access Token
+- **Validade:** 15 minutos
+- **Armazenamento:** HttpOnly Cookie
+- **Uso:** Autenticação de requisições
+- **Renovação:** Automática via refresh token
+
+#### Refresh Token
+- **Validade:** 7 dias
+- **Armazenamento:** HttpOnly Cookie + Database
+- **Uso:** Renovação de access tokens
+- **Segurança:** Pode ser revogado no backend
+
+### Novo Endpoint
+
+#### POST /api/v1/auth/refresh
+
+Renova o access token utilizando o refresh token.
+
+**Request:**
+```
+Cookie: refresh_token=<refresh_token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "code": "TOKEN_REFRESHED",
+  "message": "Access token refreshed successfully",
+  "data": null
+}
+```
+
+**Headers de Response:**
+```
+Set-Cookie: access_token=<new_access_token>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900
+```
+
+**Errors:**
+- `401` - Refresh token inválido ou expirado
+- `404` - Refresh token não encontrado no banco
+
+### Implementação no Frontend
+
+```typescript
+// Interceptor automático para renovação
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...options,
+    credentials: 'include',
+  });
+
+  // Se access token expirou
+  if (response.status === 401) {
+    // Tenta renovar com refresh token
+    const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    if (refreshResponse.ok) {
+      // Retry da requisição original com novo access token
+      return fetch(url, {
+        ...options,
+        credentials: 'include',
+      }).then(r => r.json());
+    } else {
+      // Refresh token também expirou
+      window.location.href = '/login';
+      throw new Error('Session expired');
+    }
+  }
+
+  return response.json();
+}
+```
+
+### Benefícios
+
+- ✅ **Segurança aprimorada:** Access tokens de curta duração reduzem janela de ataque
+- ✅ **Melhor UX:** Usuário não precisa fazer login frequentemente
+- ✅ **Controle granular:** Refresh tokens podem ser revogados individualmente
+- ✅ **Logout remoto:** Possibilidade de encerrar sessões de outros dispositivos
+- ✅ **Auditoria:** Histórico de refresh tokens por usuário
+
+### Tabela no Banco de Dados
+
+```sql
+CREATE TABLE refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  token VARCHAR(255) NOT NULL UNIQUE,
+  device_info TEXT,
+  ip_address VARCHAR(45),
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  revoked_at TIMESTAMP,
+  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
+```
+
+### Considerações de Segurança
+
+1. **Rotação de Refresh Tokens:** A cada renovação, um novo refresh token pode ser gerado (opção mais segura)
+2. **Limite de Dispositivos:** Usuário pode ter no máximo N refresh tokens ativos
+3. **Revogação em Logout:** Ao fazer logout, refresh token deve ser removido do banco
+4. **Detecção de Roubo:** Se refresh token usado após novo ser gerado, invalidar todos os tokens do usuário
+
+### Timeline de Implementação
+
+Esta feature está planejada para uma **futura task** e será implementada quando:
+- Sistema atual estiver estável
+- Métricas de uso justificarem a complexidade adicional
+- Equipe tiver capacidade para manutenção
 
 ---
 
