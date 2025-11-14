@@ -140,11 +140,9 @@ export const CategoriaModal = ({
             <Button
               type="submit"
               className="bg-primary text-primary-foreground hover:bg-primary/90"
-              disabled={createCategoria.isPending || updateCategoria.isPending}
+              loading={createCategoria.isPending || updateCategoria.isPending}
             >
-              {createCategoria.isPending || updateCategoria.isPending
-                ? "Salvando..."
-                : "Salvar"}
+              Salvar
             </Button>
           </div>
         </form>

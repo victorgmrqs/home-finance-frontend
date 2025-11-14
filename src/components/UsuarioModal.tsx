@@ -82,7 +82,9 @@ export const UsuarioModal = ({ isOpen, onClose, usuario }: UsuarioModalProps) =>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={createUsuario.isPending || updateUsuario.isPending}>{isEditMode ? "Atualizar" : "Criar"}</Button>
+            <Button type="submit" loading={createUsuario.isPending || updateUsuario.isPending}>
+              {isEditMode ? "Atualizar" : "Criar"}
+            </Button>
           </div>
         </form>
       </DialogContent>
