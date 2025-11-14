@@ -1,4 +1,11 @@
-# Welcome to your Lovable project
+# Home Finance Frontend
+
+Sistema de controle financeiro familiar com suporte a múltiplos usuários, painéis e compartilhamento de despesas.
+
+## 📚 Documentação
+
+- **[Fluxo de Autenticação](./docs/AUTHENTICATION_FLOW.md)** - Guia completo sobre autenticação, JWT e segurança
+- **[Endpoint de Dashboard](./docs/API_DASHBOARD_ENDPOINT.md)** - Documentação do endpoint de agregação
 
 ## Project info
 
