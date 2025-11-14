@@ -247,57 +247,75 @@ async function isStorageAvailable(type: StorageType): Promise<boolean> {
 }
 
 /**
+ * Cria um adapter para o tipo especificado
+ */
+function createAdapterForType(type: StorageType): StorageAdapter {
+  switch (type) {
+    case 'indexeddb':
+      return new IndexedDBAdapter();
+    case 'localstorage':
+      return new LocalStorageAdapter();
+    case 'sessionstorage':
+      return new SessionStorageAdapter();
+    case 'memory':
+      return new MemoryStorageAdapter();
+  }
+}
+
+/**
  * Storage Service com fallback automático
  */
 class StorageService implements StorageAdapter {
   private adapter: StorageAdapter | null = null;
   private currentType: StorageType = 'memory';
   private initialized = false;
+  private initializationPromise: Promise<StorageType> | null = null;
 
   /**
    * Inicializa o storage com fallback automático
+   * Protegido contra race conditions com promise caching
    */
   async initialize(): Promise<StorageType> {
+    // Se já inicializado, retornar tipo atual
     if (this.initialized) {
       return this.currentType;
     }
 
-    // Ordem de preferência
-    const storageTypes: StorageType[] = ['indexeddb', 'localstorage', 'sessionstorage', 'memory'];
-
-    for (const type of storageTypes) {
-      const available = await isStorageAvailable(type);
-
-      if (available) {
-        this.currentType = type;
-
-        switch (type) {
-          case 'indexeddb':
-            this.adapter = new IndexedDBAdapter();
-            break;
-          case 'localstorage':
-            this.adapter = new LocalStorageAdapter();
-            break;
-          case 'sessionstorage':
-            this.adapter = new SessionStorageAdapter();
-            break;
-          case 'memory':
-            this.adapter = new MemoryStorageAdapter();
-            break;
-        }
-
-        this.initialized = true;
-        console.info(`Storage initialized with ${type}`);
-        return type;
-      }
+    // Se já há uma inicialização em andamento, aguardar ela
+    if (this.initializationPromise) {
+      return this.initializationPromise;
     }
 
-    // Fallback para memory (sempre disponível)
-    this.currentType = 'memory';
-    this.adapter = new MemoryStorageAdapter();
-    this.initialized = true;
-    console.warn('All storage types failed, using memory storage');
-    return 'memory';
+    // Criar nova promise de inicialização
+    this.initializationPromise = (async () => {
+      // Ordem de preferência
+      const storageTypes: StorageType[] = ['indexeddb', 'localstorage', 'sessionstorage', 'memory'];
+
+      for (const type of storageTypes) {
+        const available = await isStorageAvailable(type);
+        if (available) {
+          this.currentType = type;
+          this.adapter = createAdapterForType(type);
+          this.initialized = true;
+          console.info(`Storage initialized with ${type}`);
+          return type;
+        }
+      }
+
+      // Fallback para memory (sempre disponível)
+      this.currentType = 'memory';
+      this.adapter = createAdapterForType('memory');
+      this.initialized = true;
+      console.warn('All storage types failed, using memory storage');
+      return 'memory';
+    })();
+
+    try {
+      return await this.initializationPromise;
+    } finally {
+      // Limpar promise após conclusão
+      this.initializationPromise = null;
+    }
   }
 
   /**
