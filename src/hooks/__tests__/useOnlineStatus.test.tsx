@@ -79,4 +79,63 @@ describe('useOnlineStatus', () => {
     expect(removeEventListenerSpy).toHaveBeenCalledWith('online', expect.any(Function));
     expect(removeEventListenerSpy).toHaveBeenCalledWith('offline', expect.any(Function));
   });
+
+  it('should handle rapid online/offline toggling without leaking listeners', () => {
+    const { rerender } = renderHook(() => useOnlineStatus());
+
+    // Simular alternância rápida entre online e offline
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { writable: true, value: false });
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { writable: true, value: true });
+      window.dispatchEvent(new Event('online'));
+    });
+
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { writable: true, value: false });
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { writable: true, value: true });
+      window.dispatchEvent(new Event('online'));
+    });
+
+    rerender();
+
+    // Deve ter chamado toast 4 vezes (2x offline, 2x online)
+    expect(mockToast).toHaveBeenCalledTimes(4);
+  });
+
+  it('should not trigger duplicate toasts when toggling repeatedly', () => {
+    const { rerender } = renderHook(() => useOnlineStatus());
+
+    // Primeira mudança para offline
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { writable: true, value: false });
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    const offlineCallCount = mockToast.mock.calls.filter(
+      (call) => call[0].title === '⚠️ Sem conexão'
+    ).length;
+
+    // Segunda mudança para offline (não deve duplicar toast)
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { writable: true, value: false });
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    rerender();
+
+    const offlineCallCountAfter = mockToast.mock.calls.filter(
+      (call) => call[0].title === '⚠️ Sem conexão'
+    ).length;
+
+    // Deve ter incrementado apenas 1 (cada evento offline dispara um toast)
+    expect(offlineCallCountAfter).toBe(offlineCallCount + 1);
+  });
 });

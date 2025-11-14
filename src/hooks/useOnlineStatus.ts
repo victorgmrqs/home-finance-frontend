@@ -13,22 +13,22 @@ export function useOnlineStatus() {
   const { toast } = useToast();
 
   useEffect(() => {
-    function handleOnline() {
+    const handleOnline = () => {
       setIsOnline(true);
       toast({
         title: '✅ Conexão restaurada',
         description: 'Você está online novamente',
       });
-    }
+    };
 
-    function handleOffline() {
+    const handleOffline = () => {
       setIsOnline(false);
       toast({
         title: '⚠️ Sem conexão',
         description: 'Você está offline. Algumas funcionalidades podem não funcionar.',
         variant: 'destructive',
       });
-    }
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);

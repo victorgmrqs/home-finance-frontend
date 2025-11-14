@@ -111,7 +111,7 @@ describe('retryHelper', () => {
 
       await expect(withRetry(fn, { maxRetries: 2, baseDelay: 10 })).rejects.toThrow(error);
 
-      expect(fn).toHaveBeenCalledTimes(3); // initial + 2 retries
+      expect(fn).toHaveBeenCalledTimes(2); // maxRetries attempts
     });
 
     it('should not retry on non-retryable errors', async () => {

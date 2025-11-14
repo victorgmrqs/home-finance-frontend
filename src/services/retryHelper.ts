@@ -36,7 +36,7 @@ export function shouldRetryError(error: unknown): boolean {
 
   // Retry em erros baseados em status HTTP
   if (error && typeof error === 'object' && 'status' in error) {
-    const status = (error as { status: number }).status;
+    const { status } = error as { status: number };
 
     // Retry em erros 5xx (server errors)
     if (status >= 500 && status < 600) {
@@ -68,23 +68,25 @@ export async function withRetry<T>(
 
   let lastError: unknown;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
 
       // Se é a última tentativa ou não deve fazer retry, lança o erro
-      if (attempt === maxRetries || !shouldRetry(error, attempt)) {
+      if (attempt === maxRetries - 1 || !shouldRetry(error, attempt)) {
         throw error;
       }
 
       // Calcula o delay e aguarda antes de retry
       const delay = calculateRetryDelay(attempt, baseDelay, maxDelay);
-      console.warn(
-        `Retry attempt ${attempt + 1}/${maxRetries} after ${Math.round(delay)}ms`,
-        error
-      );
+      if (import.meta.env.DEV) {
+        console.warn(
+          `Retry attempt ${attempt + 1}/${maxRetries} after ${Math.round(delay)}ms`,
+          error
+        );
+      }
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
