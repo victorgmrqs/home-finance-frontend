@@ -74,52 +74,7 @@ export const TransactionsPage = () => {
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>(mockTransactions);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
-  const itemsPerPage = 10;
-
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
-
-  const handleAddTransaction = (transaction: Omit<Transaction, "id">) => {
-    const newTransaction = {
-      ...transaction,
-      id: Date.now().toString()
-    };
-    const updatedTransactions = [newTransaction, ...transactions];
-    setTransactions(updatedTransactions);
-    setFilteredTransactions(updatedTransactions);
-    setIsModalOpen(false);
-  };
-
-  const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setIsModalOpen(true);
-  };
-
-  const handleUpdateTransaction = (updatedData: Omit<Transaction, "id">) => {
-    if (!editingTransaction) return;
-
-    const updatedTransaction = {
-      ...updatedData,
-      id: editingTransaction.id
-    };
-
-    const updatedTransactions = transactions.map(t =>
-      t.id === editingTransaction.id ? updatedTransaction : t
-    );
-
-    setTransactions(updatedTransactions);
-    setFilteredTransactions(updatedTransactions);
-    setEditingTransaction(undefined);
-    setIsModalOpen(false);
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setEditingTransaction(undefined);
-  };
-
-  const handleFilter = (filterParams: {
+  const [currentFilters, setCurrentFilters] = useState<{
     tipo?: string;
     categoria?: string;
     descricao?: string;
@@ -127,8 +82,16 @@ export const TransactionsPage = () => {
     painel_id?: number;
     mes?: string;
     local_search?: string;
-  }) => {
-    let filtered = [...transactions];
+  }>({});
+  const itemsPerPage = 10;
+
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+
+  // Função auxiliar para aplicar filtros
+  const applyFilters = (transactionsList: Transaction[], filterParams: typeof currentFilters): Transaction[] => {
+    let filtered = [...transactionsList];
 
     // Filtro por tipo
     if (filterParams.tipo && filterParams.tipo !== "todos") {
@@ -164,6 +127,63 @@ export const TransactionsPage = () => {
       filtered = filtered.filter(t => t.painel_id === filterParams.painel_id);
     }
 
+    return filtered;
+  };
+
+  const handleAddTransaction = (transaction: Omit<Transaction, "id">) => {
+    const newTransaction = {
+      ...transaction,
+      id: Date.now().toString()
+    };
+    const updatedTransactions = [newTransaction, ...transactions];
+    setTransactions(updatedTransactions);
+    // Reaplicar filtros após adicionar transação
+    setFilteredTransactions(applyFilters(updatedTransactions, currentFilters));
+    setIsModalOpen(false);
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateTransaction = (updatedData: Omit<Transaction, "id">) => {
+    if (!editingTransaction) return;
+
+    const updatedTransaction = {
+      ...updatedData,
+      id: editingTransaction.id
+    };
+
+    const updatedTransactions = transactions.map(t =>
+      t.id === editingTransaction.id ? updatedTransaction : t
+    );
+
+    setTransactions(updatedTransactions);
+    // Reaplicar filtros após atualizar transação
+    setFilteredTransactions(applyFilters(updatedTransactions, currentFilters));
+    setEditingTransaction(undefined);
+    setIsModalOpen(false);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingTransaction(undefined);
+  };
+
+  const handleFilter = (filterParams: {
+    tipo?: string;
+    categoria?: string;
+    descricao?: string;
+    location?: string;
+    painel_id?: number;
+    mes?: string;
+    local_search?: string;
+  }) => {
+    // Salvar os parâmetros de filtro atuais
+    setCurrentFilters(filterParams);
+    // Aplicar filtros usando a função auxiliar
+    const filtered = applyFilters(transactions, filterParams);
     setFilteredTransactions(filtered);
     setCurrentPage(1);
   };
