@@ -4,20 +4,27 @@ import userEvent from '@testing-library/user-event'
 import { LoginPage } from '@/components/LoginPage'
 import { renderWithProviders } from '@/test/test-utils'
 import { useLogin } from '@/hooks/useLogin'
+import { useRegister } from '@/hooks/useRegister'
 import { useToast } from '@/hooks/use-toast'
 
 // Mock the hooks
 vi.mock('@/hooks/useLogin')
+vi.mock('@/hooks/useRegister')
 vi.mock('@/hooks/use-toast')
 
 describe('LoginPage', () => {
   const mockMutate = vi.fn()
+  const mockRegisterMutate = vi.fn()
   const mockToast = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
     ;(useLogin as any).mockReturnValue({
       mutate: mockMutate,
+      isPending: false,
+    })
+    ;(useRegister as any).mockReturnValue({
+      mutate: mockRegisterMutate,
       isPending: false,
     })
     ;(useToast as any).mockReturnValue({
@@ -42,10 +49,13 @@ describe('LoginPage', () => {
     expect(senhaInput).toHaveAttribute('aria-required', 'true')
     
     // Verificar que os asteriscos estão presentes nos labels
-    const emailLabel = emailInput.closest('label') || document.querySelector('label[for="email"]')
-    const senhaLabel = senhaInput.closest('label') || document.querySelector('label[for="password"]')
+    // Usar querySelector com os IDs corretos (login-email e login-password)
+    const emailLabel = document.querySelector('label[for="login-email"]')
+    const senhaLabel = document.querySelector('label[for="login-password"]')
     
+    expect(emailLabel).toBeInTheDocument()
     expect(emailLabel).toHaveTextContent('*')
+    expect(senhaLabel).toBeInTheDocument()
     expect(senhaLabel).toHaveTextContent('*')
   })
 
