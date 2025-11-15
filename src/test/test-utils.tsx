@@ -3,7 +3,6 @@ import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { UserProvider } from '@/contexts/UserContext'
-import { PainelProvider } from '@/contexts/PainelContext'
 
 // Mock data
 export const mockUser = {
@@ -236,9 +235,7 @@ export function renderWithProviders(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <UserProvider>
-            <PainelProvider>
-              {children}
-            </PainelProvider>
+            {children}
           </UserProvider>
         </BrowserRouter>
       </QueryClientProvider>
