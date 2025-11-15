@@ -73,8 +73,10 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />)
 
-    expect(screen.getByText('Entrando...')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Entrando...' })).toBeDisabled()
+    const submitButton = screen.getByRole('button', { name: 'Entrar' })
+    expect(submitButton).toBeDisabled()
+    // Verifica que o spinner está presente (Loader2 icon)
+    expect(submitButton.querySelector('svg')).toBeInTheDocument()
   })
 })
 
