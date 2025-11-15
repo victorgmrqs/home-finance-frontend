@@ -4,16 +4,23 @@ import userEvent from '@testing-library/user-event'
 import { LoginPage } from '@/components/LoginPage'
 import { renderWithProviders } from '@/test/test-utils'
 import { useLogin } from '@/hooks/useLogin'
+import { useRegister } from '@/hooks/useRegister'
 
 vi.mock('@/hooks/useLogin')
+vi.mock('@/hooks/useRegister')
 
 describe('LoginPage', () => {
   const mockMutate = vi.fn()
+  const mockRegisterMutate = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
     ;(useLogin as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockMutate,
+      isPending: false,
+    })
+    ;(useRegister as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: mockRegisterMutate,
       isPending: false,
     })
   })
@@ -35,10 +42,13 @@ describe('LoginPage', () => {
     expect(senhaInput).toHaveAttribute('aria-required', 'true')
     
     // Verificar que os asteriscos estão presentes nos labels
-    const emailLabel = emailInput.closest('label') || document.querySelector('label[for="email"]')
-    const senhaLabel = senhaInput.closest('label') || document.querySelector('label[for="password"]')
+    // Usar querySelector com os IDs corretos (login-email e login-password)
+    const emailLabel = document.querySelector('label[for="login-email"]')
+    const senhaLabel = document.querySelector('label[for="login-password"]')
     
+    expect(emailLabel).toBeInTheDocument()
     expect(emailLabel).toHaveTextContent('*')
+    expect(senhaLabel).toBeInTheDocument()
     expect(senhaLabel).toHaveTextContent('*')
   })
 
@@ -136,7 +146,8 @@ describe('LoginPage', () => {
     expect(passwordInput).toHaveAttribute('aria-required', 'true')
     
     // Verificar que o label da senha contém o asterisco
-    const passwordLabel = passwordInput.closest('label') || document.querySelector('label[for="password"]')
+    // Usar querySelector com o ID correto (login-password)
+    const passwordLabel = document.querySelector('label[for="login-password"]')
     expect(passwordLabel).toBeInTheDocument()
     expect(passwordLabel).toHaveTextContent('*')
   })
