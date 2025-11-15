@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, Pencil, Trash2 } from "lucide-react";
-import type { Transaction } from "./TransactionsPage";
+import type { Transaction } from "./TransactionsPageInfiniteScroll";
 
 interface TransactionTableProps {
   transactions: Transaction[];

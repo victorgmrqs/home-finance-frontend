@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { getTipoContaIcon } from "@/components/TipoContaIcon";
 import { usePaineis } from "@/hooks/usePaineis";
 import { useCategorias } from "@/hooks/useCategorias";
-import type { Transaction } from "./TransactionsPage";
+import type { Transaction } from "./TransactionsPageInfiniteScroll";
 
 interface TransactionFiltersProps {
   transactions: Transaction[];
