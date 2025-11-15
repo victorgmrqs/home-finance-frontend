@@ -73,6 +73,7 @@ export const TransactionsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>(mockTransactions);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   const itemsPerPage = 10;
 
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
@@ -88,6 +89,34 @@ export const TransactionsPage = () => {
     setTransactions(updatedTransactions);
     setFilteredTransactions(updatedTransactions);
     setIsModalOpen(false);
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateTransaction = (updatedData: Omit<Transaction, "id">) => {
+    if (!editingTransaction) return;
+
+    const updatedTransaction = {
+      ...updatedData,
+      id: editingTransaction.id
+    };
+
+    const updatedTransactions = transactions.map(t =>
+      t.id === editingTransaction.id ? updatedTransaction : t
+    );
+
+    setTransactions(updatedTransactions);
+    setFilteredTransactions(updatedTransactions);
+    setEditingTransaction(undefined);
+    setIsModalOpen(false);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingTransaction(undefined);
   };
 
   const handleFilter = (filterParams: {
@@ -170,7 +199,10 @@ export const TransactionsPage = () => {
 
         {/* Tabela */}
         <div className="bg-card rounded-lg shadow-sm border border-border mb-6">
-          <TransactionTable transactions={paginatedTransactions} />
+          <TransactionTable
+            transactions={paginatedTransactions}
+            onEditTransaction={handleEditTransaction}
+          />
         </div>
 
         {/* Paginação */}
@@ -182,11 +214,13 @@ export const TransactionsPage = () => {
       </main>
 
       {/* Modal */}
-      <TransactionModal 
+      <TransactionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleAddTransaction}
+        onClose={handleModalClose}
+        onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction}
         existingLocations={Array.from(new Set(transactions.map(t => t.location)))}
+        mode={editingTransaction ? "edit" : "create"}
+        transactionToEdit={editingTransaction}
       />
     </div>
   );
