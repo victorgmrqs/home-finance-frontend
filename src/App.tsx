@@ -3,8 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ErrorBoundary } from "react-error-boundary";
 import { UserProvider } from "./contexts/UserContext";
 import { UserErrorBoundary } from "./components/UserErrorBoundary";
+import { ErrorFallback } from "./components/ErrorFallback";
 import { LoginPage } from "./components/LoginPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Dashboard } from "./components/Dashboard";
@@ -26,6 +28,15 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Error logging function
+const logError = (error: Error, errorInfo: { componentStack: string }) => {
+  console.error('Uncaught error:', error, errorInfo);
+
+  // In production, you could send this to an error tracking service like Sentry
+  // Example:
+  // Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
+};
 
 const AppContent = () => {
   useOnlineStatus(); // Monitora status de conexão e exibe toasts
@@ -53,15 +64,24 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <UserErrorBoundary>
-      <UserProvider>
-        <TooltipProvider>
-          <AppContent />
-        </TooltipProvider>
-      </UserProvider>
-    </UserErrorBoundary>
-  </QueryClientProvider>
+  <ErrorBoundary
+    FallbackComponent={ErrorFallback}
+    onError={logError}
+    onReset={() => {
+      // Reset the state of your app so the error doesn't happen again
+      window.location.href = '/';
+    }}
+  >
+    <QueryClientProvider client={queryClient}>
+      <UserErrorBoundary>
+        <UserProvider>
+          <TooltipProvider>
+            <AppContent />
+          </TooltipProvider>
+        </UserProvider>
+      </UserErrorBoundary>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
