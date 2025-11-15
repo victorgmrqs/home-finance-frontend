@@ -22,9 +22,24 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />)
 
     expect(screen.getByText('Home Finance')).toBeInTheDocument()
-    expect(screen.getByLabelText('Email')).toBeInTheDocument()
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+    
+    const emailInput = screen.getByLabelText(/email/i)
+    const senhaInput = screen.getByLabelText(/senha/i)
+    
+    expect(emailInput).toBeInTheDocument()
+    expect(senhaInput).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
+
+    // Verificar que os campos obrigatórios têm o asterisco
+    expect(emailInput).toHaveAttribute('aria-required', 'true')
+    expect(senhaInput).toHaveAttribute('aria-required', 'true')
+    
+    // Verificar que os asteriscos estão presentes nos labels
+    const emailLabel = emailInput.closest('label') || document.querySelector('label[for="email"]')
+    const senhaLabel = senhaInput.closest('label') || document.querySelector('label[for="password"]')
+    
+    expect(emailLabel).toHaveTextContent('*')
+    expect(senhaLabel).toHaveTextContent('*')
   })
 
   it('should not call mutation with empty email', async () => {
@@ -42,7 +57,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginPage />)
 
-    const emailInput = screen.getByLabelText('Email')
+    const emailInput = screen.getByLabelText(/email/i)
     const loginButton = screen.getByRole('button', { name: /entrar/i })
 
     await user.type(emailInput, 'test@example.com')
@@ -56,8 +71,8 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginPage />)
 
-    const emailInput = screen.getByLabelText('Email')
-    const passwordInput = screen.getByLabelText('Senha')
+    const emailInput = screen.getByLabelText(/email/i)
+    const passwordInput = screen.getByLabelText(/senha/i)
     const loginButton = screen.getByRole('button', { name: /entrar/i })
 
     await user.type(emailInput, 'joao@example.com')
@@ -108,24 +123,38 @@ describe('LoginPage', () => {
   it('should render password field', () => {
     renderWithProviders(<LoginPage />)
 
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
-    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
+    const passwordInput = screen.getByLabelText(/senha/i)
+    expect(passwordInput).toBeInTheDocument()
+    expect(passwordInput).toHaveAttribute('type', 'password')
+  })
+
+  it('should display a red asterisk for required password field label', () => {
+    renderWithProviders(<LoginPage />)
+    
+    // Verificar que o input tem o atributo aria-required
+    const passwordInput = screen.getByLabelText(/senha/i)
+    expect(passwordInput).toHaveAttribute('aria-required', 'true')
+    
+    // Verificar que o label da senha contém o asterisco
+    const passwordLabel = passwordInput.closest('label') || document.querySelector('label[for="password"]')
+    expect(passwordLabel).toBeInTheDocument()
+    expect(passwordLabel).toHaveTextContent('*')
   })
 
   it('should handle login error and show error toast', async () => {
     const user = userEvent.setup()
-    
+
     // Mock mutate to call onError callback
     mockMutate.mockImplementation((data, options) => {
       if (options && options.onError) {
         options.onError(new Error('Credenciais inválidas'))
       }
     })
-    
+
     renderWithProviders(<LoginPage />)
 
-    const emailInput = screen.getByLabelText('Email')
-    const passwordInput = screen.getByLabelText('Senha')
+    const emailInput = screen.getByLabelText(/email/i)
+    const passwordInput = screen.getByLabelText(/senha/i)
     const loginButton = screen.getByRole('button', { name: /entrar/i })
 
     await user.type(emailInput, 'joao@example.com')
