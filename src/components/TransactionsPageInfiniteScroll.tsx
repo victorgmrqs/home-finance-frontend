@@ -15,8 +15,26 @@ import { useLocais, useCreateLocal } from "@/hooks/useLocais";
 import { useCreateTransaction } from "@/hooks/useTransactions";
 import type { TransactionCreateInput, Transaction as APITransaction, RecurrenceType, TransactionFilters } from "@/types/transaction";
 import type { Local } from "@/types/local";
-import type { Transaction } from "./TransactionsPage";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Frontend Transaction type (UI format)
+export interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  value: number;
+  type: "entrada" | "saida";
+  category: string;
+  location: string;
+  recurrence: "diario" | "semanal" | "mensal" | "ocasional";
+  tipo_divisao?: "PESSOAL" | "COMPARTILHADO_50_50" | "COMPARTILHADO_CUSTOM";
+  valor_por_pessoa?: number | null;
+  porcentagem_divisao?: number | null;
+  data_vencimento?: string | null;
+  status_pagamento?: "PENDENTE" | "PAGO" | "VENCIDO";
+  painel_id?: number;
+  parcelas?: number | null;
+}
 
 // Adapter to convert backend format to frontend format
 function adaptTransaction(apiTransaction: APITransaction, locais: Local[] = []): Transaction {

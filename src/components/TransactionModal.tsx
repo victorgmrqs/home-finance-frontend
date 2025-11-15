@@ -16,7 +16,7 @@ import { useCategorias, useCreateCategoria } from "@/hooks/useCategorias";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentDate } from "@/utils/date";
-import type { Transaction } from "./TransactionsPage";
+import type { Transaction } from "./TransactionsPageInfiniteScroll";
 
 interface TransactionModalProps {
   isOpen: boolean;
