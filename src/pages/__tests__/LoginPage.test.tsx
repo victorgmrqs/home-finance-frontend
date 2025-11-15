@@ -29,8 +29,8 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />)
 
     expect(screen.getByText('Entrar')).toBeInTheDocument()
-    expect(screen.getByLabelText('Email')).toBeInTheDocument()
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/senha/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
   })
 
@@ -49,8 +49,8 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginPage />)
 
-    const emailInput = screen.getByLabelText('Email')
-    const passwordInput = screen.getByLabelText('Senha')
+    const emailInput = screen.getByLabelText(/email/i)
+    const passwordInput = screen.getByLabelText(/senha/i)
     const submitButton = screen.getByRole('button', { name: 'Entrar' })
 
     await user.type(emailInput, 'test@example.com')

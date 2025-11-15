@@ -66,7 +66,7 @@ export const LoginPage = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
               <Input
                 id="email"
                 type="email"
@@ -78,7 +78,7 @@ export const LoginPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">Senha <span className="text-destructive">*</span></Label>
               <Input
                 id="password"
                 type="password"

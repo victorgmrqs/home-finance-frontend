@@ -208,7 +208,7 @@ export const TransactionModal = ({
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Valor */}
               <div>
-                <Label htmlFor="value">Valor *</Label>
+                <Label htmlFor="value">Valor <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                     R$
@@ -229,7 +229,7 @@ export const TransactionModal = ({
 
               {/* Tipo */}
               <div>
-                <Label>Tipo *</Label>
+                <Label>Tipo <span className="text-destructive">*</span></Label>
                 <Select value={formData.type} onValueChange={(value: "entrada" | "saida") => setFormData({ ...formData, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -243,7 +243,7 @@ export const TransactionModal = ({
 
               {/* Categoria */}
               <div>
-                <Label>Categoria *</Label>
+                <Label>Categoria <span className="text-destructive">*</span></Label>
                 <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -309,7 +309,7 @@ export const TransactionModal = ({
 
               {/* Cartão */}
               <div className="space-y-2">
-                <Label htmlFor="painel_id">Cartão *</Label>
+                <Label htmlFor="painel_id">Cartão <span className="text-destructive">*</span></Label>
                 {paineisLoading ? (
                   <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                     Carregando cartões...
@@ -395,7 +395,7 @@ export const TransactionModal = ({
 
               {/* Valor */}
               <div>
-                <Label htmlFor="value-adv">Valor *</Label>
+                <Label htmlFor="value-adv">Valor <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                     R$
@@ -416,7 +416,7 @@ export const TransactionModal = ({
 
               {/* Tipo */}
               <div>
-                <Label>Tipo *</Label>
+                <Label>Tipo <span className="text-destructive">*</span></Label>
                 <Select value={formData.type} onValueChange={(value: "entrada" | "saida") => setFormData({ ...formData, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -430,7 +430,7 @@ export const TransactionModal = ({
 
               {/* Categoria */}
               <div>
-                <Label>Categoria *</Label>
+                <Label>Categoria <span className="text-destructive">*</span></Label>
                 <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -551,7 +551,7 @@ export const TransactionModal = ({
 
               {/* Cartão */}
               <div className="space-y-2">
-                <Label htmlFor="painel_id_adv">Cartão *</Label>
+                <Label htmlFor="painel_id_adv">Cartão <span className="text-destructive">*</span></Label>
                 {paineisLoading ? (
                   <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                     Carregando cartões...

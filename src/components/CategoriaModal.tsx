@@ -98,7 +98,7 @@ export const CategoriaModal = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nome */}
           <div>
-            <Label htmlFor="nome">Nome *</Label>
+            <Label htmlFor="nome">Nome <span className="text-destructive">*</span></Label>
             <Input
               id="nome"
               placeholder="Ex: Alimentação"

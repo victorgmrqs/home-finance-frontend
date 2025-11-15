@@ -22,8 +22,8 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />)
 
     expect(screen.getByText('Home Finance')).toBeInTheDocument()
-    expect(screen.getByLabelText('Email')).toBeInTheDocument()
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/senha/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
   })
 
@@ -42,7 +42,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginPage />)
 
-    const emailInput = screen.getByLabelText('Email')
+    const emailInput = screen.getByLabelText(/email/i)
     const loginButton = screen.getByRole('button', { name: /entrar/i })
 
     await user.type(emailInput, 'test@example.com')
@@ -56,8 +56,8 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginPage />)
 
-    const emailInput = screen.getByLabelText('Email')
-    const passwordInput = screen.getByLabelText('Senha')
+    const emailInput = screen.getByLabelText(/email/i)
+    const passwordInput = screen.getByLabelText(/senha/i)
     const loginButton = screen.getByRole('button', { name: /entrar/i })
 
     await user.type(emailInput, 'joao@example.com')
@@ -108,24 +108,24 @@ describe('LoginPage', () => {
   it('should render password field', () => {
     renderWithProviders(<LoginPage />)
 
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
-    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password')
+    expect(screen.getByLabelText(/senha/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/senha/i)).toHaveAttribute('type', 'password')
   })
 
   it('should handle login error and show error toast', async () => {
     const user = userEvent.setup()
-    
+
     // Mock mutate to call onError callback
     mockMutate.mockImplementation((data, options) => {
       if (options && options.onError) {
         options.onError(new Error('Credenciais inválidas'))
       }
     })
-    
+
     renderWithProviders(<LoginPage />)
 
-    const emailInput = screen.getByLabelText('Email')
-    const passwordInput = screen.getByLabelText('Senha')
+    const emailInput = screen.getByLabelText(/email/i)
+    const passwordInput = screen.getByLabelText(/senha/i)
     const loginButton = screen.getByRole('button', { name: /entrar/i })
 
     await user.type(emailInput, 'joao@example.com')
