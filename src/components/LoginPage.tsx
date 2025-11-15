@@ -89,8 +89,8 @@ export const LoginPage = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? 'Entrando...' : 'Entrar'}
+            <Button type="submit" className="w-full" loading={isPending}>
+              Entrar
             </Button>
           </form>
 

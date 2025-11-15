@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiStatusBanner } from '../ApiStatusBanner';
 import { api } from '@/services/api';
@@ -132,12 +132,14 @@ describe('ApiStatusBanner', () => {
 
     // Simulate circuit opening
     if (listener) {
-      listener({
-        state: 'OPEN',
-        failures: 3,
-        successes: 0,
-        lastFailureTime: Date.now(),
-        nextAttemptTime: Date.now() + 30000,
+      act(() => {
+        listener!({
+          state: 'OPEN',
+          failures: 3,
+          successes: 0,
+          lastFailureTime: Date.now(),
+          nextAttemptTime: Date.now() + 30000,
+        });
       });
     }
 

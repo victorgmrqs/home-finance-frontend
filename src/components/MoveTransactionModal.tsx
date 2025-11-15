@@ -127,9 +127,10 @@ export const MoveTransactionModal = ({ isOpen, onClose, transaction }: MoveTrans
             </Button>
             <Button
               type="submit"
-              disabled={!selectedPainelId || moveTransaction.isPending || availablePaineis.length === 0}
+              loading={moveTransaction.isPending}
+              disabled={!selectedPainelId || availablePaineis.length === 0}
             >
-              {moveTransaction.isPending ? "Movendo..." : "Mover"}
+              Mover
             </Button>
           </div>
         </form>

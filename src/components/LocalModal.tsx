@@ -199,7 +199,7 @@ export const LocalModal = ({ isOpen, onClose, local }: LocalModalProps) => {
             </Button>
             <Button
               type="submit"
-              disabled={createLocal.isPending || updateLocal.isPending}
+              loading={createLocal.isPending || updateLocal.isPending}
             >
               {isEditMode ? "Atualizar" : "Criar"}
             </Button>

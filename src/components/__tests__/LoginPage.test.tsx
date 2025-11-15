@@ -80,8 +80,29 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />)
 
-    expect(screen.getByText('Entrando...')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /entrando/i })).toBeDisabled()
+    const button = screen.getByRole('button', { name: /carregando/i })
+    expect(button).toBeDisabled()
+    expect(button).toBeInTheDocument()
+    // Verifica que o spinner (svg) está presente quando loading é true
+    expect(button.querySelector('svg')).toBeInTheDocument()
+    // Verifica atributos de acessibilidade
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('should not show loading state when not pending', () => {
+    ;(useLogin as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    })
+
+    renderWithProviders(<LoginPage />)
+
+    const button = screen.getByRole('button', { name: /entrar/i })
+    expect(button).not.toBeDisabled()
+    // Verifica que o spinner não está presente quando loading é false
+    expect(button.querySelector('svg')).not.toBeInTheDocument()
+    expect(button).toHaveAttribute('aria-busy', 'false')
   })
 
   it('should render password field', () => {
