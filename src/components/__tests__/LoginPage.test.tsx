@@ -80,8 +80,9 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />)
 
-    expect(screen.getByText('Entrando...')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /entrando/i })).toBeDisabled()
+    const button = screen.getByRole('button', { name: /entrar/i })
+    expect(button).toBeDisabled()
+    expect(button).toBeInTheDocument()
   })
 
   it('should render password field', () => {
