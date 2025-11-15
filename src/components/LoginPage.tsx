@@ -121,8 +121,9 @@ export const LoginPage = () => {
           navigate('/dashboard');
         },
         onError: (error: any) => {
-          // Tratamento específico por status
-          const message = error.status === 409
+          // Tratamento específico por status, com type guard para 'status'
+          const hasStatus = typeof error === 'object' && error !== null && 'status' in error;
+          const message = hasStatus && error.status === 409
             ? 'Este email já está cadastrado'
             : error.message || 'Erro ao criar conta. Tente novamente.';
 
