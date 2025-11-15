@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RequiredIndicator } from "@/components/ui/required-indicator";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateCategoria, useUpdateCategoria } from "@/hooks/useCategorias";
 import { useToast } from "@/hooks/use-toast";
@@ -98,7 +99,7 @@ export const CategoriaModal = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nome */}
           <div>
-            <Label htmlFor="nome">Nome <span className="text-destructive">*</span></Label>
+            <Label htmlFor="nome">Nome <RequiredIndicator /></Label>
             <Input
               id="nome"
               placeholder="Ex: Alimentação"
@@ -107,6 +108,7 @@ export const CategoriaModal = ({
                 setFormData({ ...formData, nome: e.target.value })
               }
               required
+              aria-required="true"
               maxLength={100}
             />
             <p className="text-xs text-muted-foreground mt-1">

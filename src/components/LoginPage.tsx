@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { RequiredIndicator } from '@/components/ui/required-indicator';
 import { useToast } from '@/hooks/use-toast';
 import { useLogin } from '@/hooks/useLogin';
 
@@ -66,7 +67,7 @@ export const LoginPage = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+              <Label htmlFor="email">Email <RequiredIndicator /></Label>
               <Input
                 id="email"
                 type="email"
@@ -75,10 +76,11 @@ export const LoginPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isPending}
                 required
+                aria-required="true"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha <span className="text-destructive">*</span></Label>
+              <Label htmlFor="password">Senha <RequiredIndicator /></Label>
               <Input
                 id="password"
                 type="password"
@@ -87,6 +89,7 @@ export const LoginPage = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isPending}
                 required
+                aria-required="true"
               />
             </div>
             <Button type="submit" className="w-full" loading={isPending}>

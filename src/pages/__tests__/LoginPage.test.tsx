@@ -29,9 +29,24 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />)
 
     expect(screen.getByText('Entrar')).toBeInTheDocument()
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/senha/i)).toBeInTheDocument()
+    
+    const emailInput = screen.getByLabelText(/email/i)
+    const senhaInput = screen.getByLabelText(/senha/i)
+    
+    expect(emailInput).toBeInTheDocument()
+    expect(senhaInput).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
+
+    // Verificar que os campos obrigatórios têm o atributo aria-required
+    expect(emailInput).toHaveAttribute('aria-required', 'true')
+    expect(senhaInput).toHaveAttribute('aria-required', 'true')
+    
+    // Verificar que os asteriscos estão presentes nos labels
+    const emailLabel = emailInput.closest('label') || document.querySelector('label[for="email"]')
+    const senhaLabel = senhaInput.closest('label') || document.querySelector('label[for="password"]')
+    
+    expect(emailLabel).toHaveTextContent('*')
+    expect(senhaLabel).toHaveTextContent('*')
   })
 
   it('should show validation errors for empty fields', async () => {

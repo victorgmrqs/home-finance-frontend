@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RequiredIndicator } from "@/components/ui/required-indicator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -208,7 +209,7 @@ export const TransactionModal = ({
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Valor */}
               <div>
-                <Label htmlFor="value">Valor <span className="text-destructive">*</span></Label>
+                <Label htmlFor="value">Valor <RequiredIndicator /></Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                     R$
@@ -223,13 +224,14 @@ export const TransactionModal = ({
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                     required
+                    aria-required="true"
                   />
                 </div>
               </div>
 
               {/* Tipo */}
               <div>
-                <Label>Tipo <span className="text-destructive">*</span></Label>
+                <Label>Tipo <RequiredIndicator /></Label>
                 <Select value={formData.type} onValueChange={(value: "entrada" | "saida") => setFormData({ ...formData, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -243,7 +245,7 @@ export const TransactionModal = ({
 
               {/* Categoria */}
               <div>
-                <Label>Categoria <span className="text-destructive">*</span></Label>
+                <Label>Categoria <RequiredIndicator /></Label>
                 <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -309,7 +311,7 @@ export const TransactionModal = ({
 
               {/* Cartão */}
               <div className="space-y-2">
-                <Label htmlFor="painel_id">Cartão <span className="text-destructive">*</span></Label>
+                <Label htmlFor="painel_id">Cartão <RequiredIndicator /></Label>
                 {paineisLoading ? (
                   <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                     Carregando cartões...
@@ -395,7 +397,7 @@ export const TransactionModal = ({
 
               {/* Valor */}
               <div>
-                <Label htmlFor="value-adv">Valor <span className="text-destructive">*</span></Label>
+                <Label htmlFor="value-adv">Valor <RequiredIndicator /></Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                     R$
@@ -410,13 +412,14 @@ export const TransactionModal = ({
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                     required
+                    aria-required="true"
                   />
                 </div>
               </div>
 
               {/* Tipo */}
               <div>
-                <Label>Tipo <span className="text-destructive">*</span></Label>
+                <Label>Tipo <RequiredIndicator /></Label>
                 <Select value={formData.type} onValueChange={(value: "entrada" | "saida") => setFormData({ ...formData, type: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -430,7 +433,7 @@ export const TransactionModal = ({
 
               {/* Categoria */}
               <div>
-                <Label>Categoria <span className="text-destructive">*</span></Label>
+                <Label>Categoria <RequiredIndicator /></Label>
                 <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -551,7 +554,7 @@ export const TransactionModal = ({
 
               {/* Cartão */}
               <div className="space-y-2">
-                <Label htmlFor="painel_id_adv">Cartão <span className="text-destructive">*</span></Label>
+                <Label htmlFor="painel_id_adv">Cartão <RequiredIndicator /></Label>
                 {paineisLoading ? (
                   <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                     Carregando cartões...
