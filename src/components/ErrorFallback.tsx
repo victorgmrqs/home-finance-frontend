@@ -31,10 +31,15 @@ export const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps)
         <CardContent className="space-y-4">
           {/* Error details in development */}
           {process.env.NODE_ENV === 'development' && (
-            <div className="p-4 bg-muted rounded-md">
+            <div className="p-4 bg-muted rounded-md space-y-2">
               <p className="text-sm font-mono text-muted-foreground">
                 {error.message}
               </p>
+              {error.stack && (
+                <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-words">
+                  {error.stack}
+                </pre>
+              )}
             </div>
           )}
 

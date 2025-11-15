@@ -68,8 +68,9 @@ const App = () => (
     FallbackComponent={ErrorFallback}
     onError={logError}
     onReset={() => {
-      // Reset the state of your app so the error doesn't happen again
-      window.location.href = '/';
+      // Clear React Query cache to reset app state
+      queryClient.clear();
+      // The ErrorFallback component handles navigation using useNavigate
     }}
   >
     <QueryClientProvider client={queryClient}>

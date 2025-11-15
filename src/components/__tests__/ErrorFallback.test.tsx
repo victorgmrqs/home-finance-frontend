@@ -37,15 +37,17 @@ describe('ErrorFallback', () => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'development';
 
-    render(
-      <BrowserRouter>
-        <ErrorFallback error={mockError} resetErrorBoundary={mockResetErrorBoundary} />
-      </BrowserRouter>
-    );
+    try {
+      render(
+        <BrowserRouter>
+          <ErrorFallback error={mockError} resetErrorBoundary={mockResetErrorBoundary} />
+        </BrowserRouter>
+      );
 
-    expect(screen.getByText('Test error message')).toBeInTheDocument();
-
-    process.env.NODE_ENV = originalEnv;
+      expect(screen.getByText('Test error message')).toBeInTheDocument();
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
   });
 
   it('should call resetErrorBoundary when clicking "Tentar novamente"', async () => {
@@ -86,6 +88,23 @@ describe('ErrorFallback', () => {
       </BrowserRouter>
     );
 
+    expect(screen.getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ir para home/i })).toBeInTheDocument();
+  });
+
+  it('should handle error without message property', () => {
+    // Create an error-like object without a message
+    const errorWithoutMessage = { name: 'CustomError' } as Error;
+
+    render(
+      <BrowserRouter>
+        <ErrorFallback error={errorWithoutMessage} resetErrorBoundary={mockResetErrorBoundary} />
+      </BrowserRouter>
+    );
+
+    // Should still render the fallback UI
+    expect(screen.getByText('Algo deu errado')).toBeInTheDocument();
+    expect(screen.getByText('Ocorreu um erro inesperado. Por favor, tente novamente.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ir para home/i })).toBeInTheDocument();
   });
