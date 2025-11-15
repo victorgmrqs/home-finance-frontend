@@ -17,6 +17,16 @@ describe('Button', () => {
 
     // Botão deve estar desabilitado quando loading
     expect(button).toBeDisabled();
+
+    // Verifica que o spinner (svg) está presente
+    expect(button.querySelector('svg')).toBeInTheDocument();
+
+    // Verifica atributos de acessibilidade
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+
+    // Verifica que o texto "Carregando..." está presente para screen readers
+    expect(screen.getByText('Carregando...')).toBeInTheDocument();
   });
 
   it('should be disabled when loading prop is true', () => {
@@ -31,6 +41,15 @@ describe('Button', () => {
 
     const button = screen.getByRole('button');
     expect(button).not.toBeDisabled();
+
+    // Verifica que o spinner não está presente quando loading é false
+    expect(button.querySelector('svg')).not.toBeInTheDocument();
+
+    // Verifica que aria-busy é false quando não está carregando
+    expect(button).toHaveAttribute('aria-busy', 'false');
+
+    // O texto "Click me" deve estar visível (não é sr-only)
+    expect(screen.getByText('Click me')).toBeInTheDocument();
   });
 
   it('should respect disabled prop even when not loading', () => {

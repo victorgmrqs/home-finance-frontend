@@ -73,10 +73,24 @@ describe('LoginPage', () => {
 
     renderWithProviders(<LoginPage />)
 
-    const submitButton = screen.getByRole('button', { name: 'Entrar' })
+    const submitButton = screen.getByRole('button', { name: 'Carregando...' })
     expect(submitButton).toBeDisabled()
     // Verifica que o spinner está presente (Loader2 icon)
     expect(submitButton.querySelector('svg')).toBeInTheDocument()
+    // Verifica atributos de acessibilidade quando o botão está carregando
+    expect(submitButton).toHaveAttribute('aria-busy', 'true')
+    expect(submitButton).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('should not show loading state when not submitting', () => {
+    renderWithProviders(<LoginPage />)
+
+    const submitButton = screen.getByRole('button', { name: 'Entrar' })
+    expect(submitButton).not.toBeDisabled()
+    // Verifica que o spinner não está presente
+    expect(submitButton.querySelector('svg')).not.toBeInTheDocument()
+    // Verifica que aria-busy não está definido ou é false
+    expect(submitButton).toHaveAttribute('aria-busy', 'false')
   })
 })
 
